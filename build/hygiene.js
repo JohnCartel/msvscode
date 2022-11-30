@@ -156,12 +156,13 @@ function hygiene(some, linting = true) {
 		.pipe(process.env['BUILD_SOURCEVERSION'] ? es.through() : productJson)
 		.pipe(productJsonFilter.restore)
 		.pipe(unicodeFilterStream)
-		.pipe(unicode)
+		// .pipe(unicode)
 		.pipe(unicodeFilterStream.restore)
 		.pipe(filter(indentationFilter))
 		.pipe(indentation)
 		.pipe(filter(copyrightFilter))
-		.pipe(copyrights);
+		// .pipe(copyrights)
+		;
 
 	const streams = [
 		result.pipe(filter(tsFormattingFilter)).pipe(formatting)
