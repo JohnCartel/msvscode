@@ -1,33 +1,33 @@
 {
-	"nameShort": "Code - OSS",
-	"nameLong": "Code - OSS",
-	"applicationName": "code-oss",
-	"dataFolderName": ".vscode-oss",
-	"win32MutexName": "vscodeoss",
-	"licenseName": "MIT",
-	"licenseUrl": "https://github.com/microsoft/vscode/blob/main/LICENSE.txt",
+	"nameShort": "HESDS",
+	"nameLong": "HESDS",
+	"applicationName": "HESDS",
+	"dataFolderName": ".hesds",
+	"win32MutexName": "HESDS",
+	"licenseName": "",
+	"licenseUrl": "",
 	"serverGreeting": [],
 	"serverLicense": [],
 	"serverLicensePrompt": "",
-	"serverApplicationName": "code-server-oss",
-	"serverDataFolderName": ".vscode-server-oss",
-	"win32DirName": "Microsoft Code OSS",
-	"win32NameVersion": "Microsoft Code OSS",
-	"win32RegValueName": "CodeOSS",
+	"serverApplicationName": "hesds",
+	"serverDataFolderName": ".hesds",
+	"win32DirName": "HESDS",
+	"win32NameVersion": "HESDS",
+	"win32RegValueName": "HESDS",
 	"win32AppId": "{{E34003BB-9E10-4501-8C11-BE3FAA83F23F}",
 	"win32x64AppId": "{{D77B7E06-80BA-4137-BCF4-654B95CCEBC5}",
 	"win32arm64AppId": "{{D1ACE434-89C5-48D1-88D3-E2991DF85475}",
 	"win32UserAppId": "{{C6065F05-9603-4FC4-8101-B9781A25D88E}",
 	"win32x64UserAppId": "{{CC6B787D-37A0-49E8-AE24-8559A032BE0C}",
 	"win32arm64UserAppId": "{{3AEBF0C8-F733-4AD4-BADE-FDB816D53D7B}",
-	"win32AppUserModelId": "Microsoft.CodeOSS",
-	"win32ShellNameShort": "C&ode - OSS",
-	"darwinBundleIdentifier": "com.visualstudio.code.oss",
-	"linuxIconName": "com.visualstudio.code.oss",
+	"win32AppUserModelId": "DFS.Hesds",
+	"win32ShellNameShort": "H&espl",
+	"darwinBundleIdentifier": "com.dfs.hesds",
+	"linuxIconName": "com.dfs.hesds",
 	"licenseFileName": "LICENSE.txt",
-	"reportIssueUrl": "https://github.com/microsoft/vscode/issues/new",
-	"urlProtocol": "code-oss",
-	"webviewContentExternalBaseUrlTemplate": "https://{{uuid}}.vscode-cdn.net/insider/3c8520fab514b9f56070214496b26ff68d1b1cb5/out/vs/workbench/contrib/webview/browser/pre/",
+	"reportIssueUrl": "",
+	"urlProtocol": "hesds",
+	"webviewContentExternalBaseUrlTemplate": "",
 	"builtInExtensions": [
 		{
 			"name": "ms-vscode.js-debug-companion",
@@ -74,5 +74,155 @@
 				"publisherDisplayName": "Microsoft"
 			}
 		}
-	]
+	],
+	"trustedExtensionAuthAccess": [
+		"vscode.git",
+		"vscode.github",
+		"ms-vscode.remote-repositories",
+		"github.remotehub",
+		"ms-vscode.azure-repos",
+		"ms-vscode.remote-server",
+		"github.vscode-pull-request-github",
+		"github.codespaces",
+		"ms-vsliveshare.vsliveshare",
+		"github.copilot",
+		"hesds.code-review",
+		"hesds.lsp-codegen"
+	],
+	"auth": {
+		"loginUrl": "https://login.microsoftonline.com/common/oauth2/authorize",
+		"tokenUrl": "https://login.microsoftonline.com/common/oauth2/token",
+		"redirectUrl": "https://vscode-redirect.azurewebsites.net/",
+		"clientId": "aebc6443-996d-45c2-90f0-388ff96faa56"
+	},
+	"mainToolbarActions": [
+		{
+			"id": "return",
+			"label": "返回",
+			"iconClass": "codicon codicon-arrow-left",
+			"group": "1",
+			"commandId": "workbench.action.navigateBack"
+		},
+		{
+			"id": "foward",
+			"label": "前进",
+			"iconClass": "codicon codicon-arrow-right",
+			"group": "1",
+			"commandId": "workbench.action.navigateForward"
+		},
+		{
+			"id": "setting",
+			"label": "设置",
+			"iconClass": "codicon codicon-settings-gear",
+			"group": "2",
+			"commandId": "workbench.action.openSettings"
+		},
+		{
+			"id": "createSPLProject",
+			"label": "创建产品线工程",
+			"iconClass": "codicon codicon-circuit-board",
+			"group": "2",
+			"commandId": "splproject.projectWizard"
+		},
+		{
+			"id": "explorer",
+			"label": "打开资源管理器",
+			"iconClass": "codicon codicon-folder-opened",
+			"group": "2",
+			"commandId": "workbench.view.explorer"
+		},
+		{
+			"id": "newFile",
+			"label": "新建文件",
+			"iconClass": "codicon codicon-goto-next-location",
+			"group": "2",
+			"commandId": "workbench.action.files.newUntitledFile"
+		},
+		{
+			"id": "editMenu",
+			"label": "编辑菜单",
+			"iconClass": "codicon codicon-law",
+			"group": "3",
+			"menuId": "MenubarEditMenu"
+		},
+		{
+			"id": "scmMenu",
+			"label": "版本控制菜单",
+			"iconClass": "codicon codicon-flame",
+			"group": "3",
+			"menuId": "SCMTitle"
+		}
+	],
+	"configurationSync.store": {
+		"url": "https://vscode-sync.trafficmanager.net/",
+		"stableUrl": "https://vscode-sync.trafficmanager.net/",
+		"insidersUrl": "https://vscode-sync-insiders.trafficmanager.net/",
+		"canSwitch": false,
+		"authenticationProviders": {
+			"github": {
+				"scopes": [
+					"user:email"
+				]
+			},
+			"microsoft": {
+				"scopes": [
+					"openid",
+					"profile",
+					"email",
+					"offline_access"
+				]
+			}
+		}
+	},
+	"editSessions.store": {
+		"url": "https://vscode-sync.trafficmanager.net/",
+		"authenticationProviders": {
+			"microsoft": {
+				"scopes": [
+					"openid",
+					"profile",
+					"email",
+					"offline_access"
+				]
+			},
+			"github": {
+				"scopes": [
+					"user:email"
+				]
+			},
+			"hecc": {
+				"scopes": [
+					"openid",
+					"profile",
+					"email"
+				]
+			}
+		}
+	},
+	"tunnelApplicationName": "code-tunnel",
+	"tunnelApplicationConfig": {
+		"editorWebUrl": "https://vscode.dev",
+		"extension": {
+			"friendlyName": "Remote - Tunnels",
+			"extensionId": "ms-vscode.remote-server"
+		},
+		"authenticationProviders": {
+			"github": {
+				"scopes": [
+					"user:email",
+					"read:org"
+				]
+			}
+		}
+	},
+	"commit": "cb6ef9d7f017f884ec6f5d3c09c21a373d33f349",
+	"date": "2023-06-22T11:43:48.498Z",
+	"checksums_del": {
+		"vs/base/parts/sandbox/electron-browser/preload.js": "fqAwI3C3aj+Hn5TkIXRTng",
+		"vs/workbench/workbench.desktop.main.js": "J0sBAXo7ULjrNPkPb8YhAA",
+		"vs/workbench/workbench.desktop.main.css": "xKrNxX1hefQPMF1CAKNP9A",
+		"vs/workbench/api/node/extensionHostProcess.js": "ea69QoYofkcoOb6VknQLEA",
+		"vs/code/electron-browser/workbench/workbench.html": "l8jPIdODqyMeav5sZa3tNQ",
+		"vs/code/electron-browser/workbench/workbench.js": "0kFuE0wMs8uXBVsUzT/U5A"
+	}
 }
