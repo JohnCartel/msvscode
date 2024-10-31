@@ -89,6 +89,8 @@ Name: "{app}"; AfterInstall: DisableAppDirInheritance
 Source: "*"; Excludes: "\CodeSignSummary*.md,\tools,\tools\*,\resources\app\product.json"; DestDir: "{code:GetDestDir}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ;Source: "tools\*"; DestDir: "{app}\tools"; Flags: ignoreversion
 Source: "{#ProductJsonPath}"; DestDir: "{code:GetDestDir}\resources\app"; Flags: ignoreversion
+;{userappdata}中，包含了roaming文件夹
+Source: "{#SourceDir}\languagepacks.json"; DestDir: "{userappdata}\HESDS"; Flags: ignoreversion; AfterInstall: FileReplaceString
 
 [Icons]
 Name: "{group}\{#NameLong}"; Filename: "{app}\{#ExeBasename}.exe"; AppUserModelID: "{#AppUserId}"
@@ -1290,6 +1292,44 @@ Root: {#SoftwareClassesRootKey}; Subkey: "Software\Classes\Drive\shell\{#RegValu
 Root: {#EnvironmentRootKey}; Subkey: "{#EnvironmentKey}"; ValueType: expandsz; ValueName: "Path"; ValueData: "{olddata};{app}\bin"; Tasks: addtopath; Check: NeedsAddPath(ExpandConstant('{app}\bin'))
 
 [Code]
+procedure FileReplaceString();
+var
+  MyFile : TStrings;
+  MyText : string;
+  FileName : string;
+  SearchString: string;
+  ReplaceString: string;
+begin
+  MyFile := TStringList.Create;
+  FileName := ExpandConstant('{userappdata}\HESDS\languagepacks.json');
+  SearchString := '{{InstallPath}}';
+  ReplaceString := ExpandConstant('{app}');
+
+  try
+	if( StringChangeEx(ReplaceString, '\', '\\', True) > 0 ) then
+	begin
+		// MsgBox(ReplaceString, mbInformation, MB_OK);
+	end;
+   //  result := true;
+
+    try
+      MyFile.LoadFromFile(FileName);
+      MyText := MyFile.Text;
+
+      // { Only save if text has been changed. }
+      if StringChangeEx(MyText, SearchString, ReplaceString, True) > 0 then
+      begin;
+        MyFile.Text := MyText;
+        MyFile.SaveToFile(FileName);
+      end;
+    except
+      // result := false;
+    end;
+  finally
+    MyFile.Free;
+  end;
+end;
+
 // Don't allow installing conflicting architectures
 function InitializeSetup(): Boolean;
 var

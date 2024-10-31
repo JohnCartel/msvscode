@@ -370,7 +370,11 @@ BUILD_TARGETS.forEach(buildTarget => {
 
 		const vscodeTaskCI = task.define(`vscode${dashed(platform)}${dashed(arch)}${dashed(minified)}-ci`, task.series(
 			util.rimraf(path.join(buildRoot, destinationFolderName)),
-			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts)
+			packageTask(platform, arch, sourceFolderName, destinationFolderName, opts),
+			task.define('languagepacks.json', function () {
+				return gulp.src('languagepacks.json').
+					pipe(gulp.dest(path.join(buildRoot, destinationFolderName)));
+			})
 		));
 		gulp.task(vscodeTaskCI);
 
