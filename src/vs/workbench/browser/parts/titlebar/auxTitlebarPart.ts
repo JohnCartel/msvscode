@@ -19,9 +19,9 @@ import { IThemeService, Themable } from 'vs/platform/theme/common/themeService';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
-import { INativeHostMainService } from 'vs/platform/native/electron-main/nativeHostMainService';
 import { Color } from 'vs/base/common/color';
 import { getTitleBarStyle } from 'vs/platform/window/common/window';
+import { INativeHostService } from 'vs/platform/native/electron-sandbox/native';
 
 export interface IAuxiliaryWindow extends IDisposable {
 
@@ -67,7 +67,7 @@ export class AuxWindow extends Themable implements IDisposable, IAuxiliaryWindow
 		const symbolColor = Color.fromHex(titleBarColor).isDarker() ? '#FFFFFF' : '#000000';
 
 		// 向主进程发送消息，更新窗口的titlebar的颜色 todo@rengy check id of updateAuxTitleBarOverlay()
-		this.nativeHostService.updateAuxTitleBarOverlay(0, titleBarColor, symbolColor);
+		this.nativeHostService.updateAuxTitleBarOverlay(titleBarColor, symbolColor);
 	}
 
 	constructor(
@@ -75,7 +75,7 @@ export class AuxWindow extends Themable implements IDisposable, IAuxiliaryWindow
 		@IConfigurationService configurationService: IConfigurationService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
-		@INativeHostMainService private readonly nativeHostService: INativeHostMainService,
+		@INativeHostService private readonly nativeHostService: INativeHostService,
 		@ILifecycleService private readonly lifecycleService: ILifecycleService,
 		@IWorkbenchEnvironmentService private readonly environmentService: IWorkbenchEnvironmentService,
 		@IWorkbenchLayoutService protected readonly layoutService: IWorkbenchLayoutService
