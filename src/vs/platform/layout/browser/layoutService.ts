@@ -6,6 +6,7 @@
 import { IDimension } from 'vs/base/browser/dom';
 import { Event } from 'vs/base/common/event';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
+import { Parts } from 'vs/workbench/services/layout/browser/layoutService';
 
 export const ILayoutService = createDecorator<ILayoutService>('layoutService');
 
@@ -49,6 +50,12 @@ export interface ILayoutService {
 	readonly container: HTMLElement;
 
 	/**
+	 * Active container of the application. When multiple windows are opened, will return
+	 * the container of the active, focused window.
+	 */
+	readonly activeContainer: HTMLElement;
+
+	/**
 	 * An offset to use for positioning elements inside the container.
 	 */
 	readonly offset: ILayoutOffsetInfo;
@@ -63,4 +70,10 @@ export interface ILayoutService {
 	 * Focus the primary component of the container.
 	 */
 	focus(): void;
+
+	/**
+	 * Returns the target window container or parts HTML element within, if there is one.
+	 */
+	getContainer(targetWindow: Window): HTMLElement;
+	getContainer(targetWindow: Window, part: Parts): HTMLElement | undefined;
 }
