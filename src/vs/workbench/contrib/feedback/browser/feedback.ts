@@ -12,7 +12,7 @@ import { IIntegrityService } from 'vs/workbench/services/integrity/common/integr
 import { IThemeService, registerThemingParticipant, IColorTheme, ICssStyleCollector } from 'vs/platform/theme/common/themeService';
 import { attachButtonStyler, attachStylerCallback } from 'vs/platform/theme/common/styler';
 import { editorWidgetBackground, editorWidgetForeground, widgetShadow, inputBorder, inputForeground, inputBackground, inputActiveOptionBorder, editorBackground, textLinkForeground, contrastBorder } from 'vs/platform/theme/common/colorRegistry';
-import { append, $, addDisposableListener, EventType, EventHelper, prepend } from 'vs/base/browser/dom';
+import { append, $, addDisposableListener, EventType, EventHelper, prepend, isKeyboardEvent } from 'vs/base/browser/dom';
 import { IAnchor } from 'vs/base/browser/ui/contextview/contextview';
 import { Button } from 'vs/base/browser/ui/button/button';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
@@ -374,7 +374,7 @@ export class FeedbackWidget extends Disposable {
 		disposables.add(addDisposableListener(element, 'click', callback));
 
 		disposables.add(addDisposableListener(element, 'keypress', e => {
-			if (e instanceof KeyboardEvent) {
+			if (isKeyboardEvent(e)) {
 				const keyboardEvent = <KeyboardEvent>e;
 				if (keyboardEvent.keyCode === 13 || keyboardEvent.keyCode === 32) { // Enter or Spacebar
 					callback();
@@ -432,7 +432,7 @@ export class FeedbackWidget extends Disposable {
 	}
 
 	private onEvent(e: Event, activeElement: HTMLElement): void {
-		if (e instanceof KeyboardEvent) {
+		if (isKeyboardEvent(e)) {
 			const keyboardEvent = <KeyboardEvent>e;
 			if (keyboardEvent.keyCode === 27) { // Escape
 				this.hide();

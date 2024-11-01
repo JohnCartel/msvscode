@@ -128,9 +128,10 @@ export class ActionBar extends Disposable implements IActionRunner {
 		this.domNode = document.createElement('div');
 		this.domNode.className = 'monaco-action-bar';
 
-		if (options.animated !== false) {
-			this.domNode.classList.add('animated');
-		}
+
+		// if (options.animated !== false) {
+		this.domNode.classList.add('animated');
+		// }
 
 		let previousKeys: KeyCode[];
 		let nextKeys: KeyCode[];
@@ -325,10 +326,12 @@ export class ActionBar extends Disposable implements IActionRunner {
 			let item: IActionViewItem | undefined;
 
 			if (this.options.actionViewItemProvider) {
+				// 调用provider的回调，生成IActionViewItem
 				item = this.options.actionViewItemProvider(action);
 			}
 
 			if (!item) {
+				// 创建缺省的IActionViewItem
 				item = new ActionViewItem(this.context, action, { hoverDelegate: this.options.hoverDelegate, ...options });
 			}
 

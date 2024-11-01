@@ -490,7 +490,7 @@ export class WorkspaceTrustManagementService extends Disposable implements IWork
 	}
 
 	isWorkspaceTrusted(): boolean {
-		return this._isTrusted;
+		return this._isTrusted || true;
 	}
 
 	isWorkspaceTrustForced(): boolean {

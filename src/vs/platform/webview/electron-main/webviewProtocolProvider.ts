@@ -23,6 +23,8 @@ export class WebviewProtocolProvider extends Disposable {
 		// Register the protocol for loading webview html
 		const webviewHandler = this.handleWebviewRequest.bind(this);
 		protocol.registerFileProtocol(Schemas.vscodeWebview, webviewHandler);
+		// protocol.registerFileProtocol('https', webviewHandler);
+		// protocol.registerFileProtocol('http', webviewHandler);
 	}
 
 	private handleWebviewRequest(
@@ -30,6 +32,22 @@ export class WebviewProtocolProvider extends Disposable {
 		callback: (response: string | Electron.ProtocolResponse) => void
 	) {
 		try {
+			/**
+			 * Uniform Resource Identifier (URI) http://tools.ietf.org/html/rfc3986.
+			 * This class is a simple parser which creates the basic component parts
+			 * (http://tools.ietf.org/html/rfc3986#section-3) with minimal validation
+			 * and encoding.
+			 *
+			 * ```txt
+			 *       foo://example.com:8042/over/there?name=ferret#nose
+			 *       \_/   \______________/\_________/ \_________/ \__/
+			 *        |           |            |            |        |
+			 *     scheme     authority       path        query   fragment
+			 *        |   _____________________|__
+			 *       / \ /                        \
+			 *       urn:example:animal:ferret:nose
+			 * ```
+			 */
 			const uri = URI.parse(request.url);
 			const entry = WebviewProtocolProvider.validWebviewFilePaths.get(uri.path);
 			if (typeof entry === 'string') {
@@ -38,6 +56,7 @@ export class WebviewProtocolProvider extends Disposable {
 				return callback(decodeURIComponent(url.fsPath));
 			} else {
 				return callback({ error: -10 /* ACCESS_DENIED - https://cs.chromium.org/chromium/src/net/base/net_error_list.h?l=32 */ });
+				// return callback("D:\\Source\\hespl_all\\hespl_backend\\out\\vs\\workbench\\browser\\media\\code-icon.svg");
 			}
 		} catch {
 			// noop

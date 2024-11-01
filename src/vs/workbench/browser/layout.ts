@@ -5,7 +5,7 @@
 
 import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { Event, Emitter } from 'vs/base/common/event';
-import { EventType, addDisposableListener, getClientArea, Dimension, position, size, IDimension, isAncestorUsingFlowTo, computeScreenAwareSize } from 'vs/base/browser/dom';
+import { EventType, addDisposableListener, getClientArea, Dimension, position, size, IDimension, isAncestorUsingFlowTo, computeScreenAwareSize, getActiveDocument } from 'vs/base/browser/dom';
 import { onDidChangeFullscreen, isFullscreen } from 'vs/base/browser/browser';
 import { IWorkingCopyBackupService } from 'vs/workbench/services/workingCopy/common/workingCopyBackup';
 import { isWindows, isLinux, isMacintosh, isWeb, isNative, isIOS } from 'vs/base/common/platform';
@@ -139,6 +139,15 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 
 	readonly hasContainer = true;
 	readonly container = document.createElement('div');
+
+	get activeContainer() {
+		const activeDocument = getActiveDocument();
+		if (document === activeDocument) {
+			return this.container;
+		} else {
+			return activeDocument.body.children[0] as HTMLElement; // TODO@bpasero a bit of a hack
+		}
+	}
 
 	private _dimension!: IDimension;
 	get dimension(): IDimension { return this._dimension; }
@@ -890,7 +899,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 			return false;
 		}
 
-		const container = this.getContainer(part);
+		const container = this.getContainer(window, part);
 
 		return !!container && isAncestorUsingFlowTo(activeElement, container);
 	}
@@ -921,7 +930,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 				this.statusBarService.focus();
 			default: {
 				// Title Bar & Banner simply pass focus to container
-				const container = this.getContainer(part);
+				const container = this.getContainer(window, part);
 				if (container) {
 					container.focus();
 				}
@@ -929,19 +938,47 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		}
 	}
 
-	getContainer(part: Parts): HTMLElement | undefined {
-		if (!this.parts.get(part)) {
-			return undefined;
+	// getContainer(part: Parts): HTMLElement | undefined {
+	// 	if (!this.parts.get(part)) {
+	// 		return undefined;
+	// 	}
+
+	// 	return this.getPart(part).getContainer();
+	// }
+
+	private getContainerFromDocument(targetDocument: Document): HTMLElement {
+		if (targetDocument === document) {
+			// main window
+			return document.querySelector('[role="application"]') as HTMLElement;
+		} else {
+			// auxiliary window
+			return targetDocument.body.getElementsByClassName('monaco-workbench')[0] as HTMLElement;
+		}
+	}
+
+	getContainer(targetWindow: Window): HTMLElement;
+	getContainer(targetWindow: Window, part: Parts): HTMLElement | undefined;
+	getContainer(targetWindow: Window, part?: Parts): HTMLElement | undefined {
+		if (typeof part === 'undefined') {
+			return this.getContainerFromDocument(targetWindow.document);
 		}
 
-		return this.getPart(part).getContainer();
+		// Only some parts are supported for auxiliary windows
+		if (part) {
+			return this.getPart(part).getContainer();
+		}
+
+		return undefined;
 	}
+
 
 	isVisible(part: Parts): boolean {
 		if (this.initialized) {
 			switch (part) {
 				case Parts.TITLEBAR_PART:
 					return this.workbenchGrid.isViewVisible(this.titleBarPartView);
+				case Parts.BANNER_PART:
+					return this.workbenchGrid.isViewVisible(this.bannerPartView);
 				case Parts.SIDEBAR_PART:
 					return !this.stateModel.getRuntimeValue(LayoutStateKeys.SIDEBAR_HIDDEN);
 				case Parts.PANEL_PART:
@@ -962,6 +999,9 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 		switch (part) {
 			case Parts.TITLEBAR_PART:
 				return this.shouldShowTitleBar();
+			case Parts.BANNER_PART:
+				return true;
+			// return this.shouldShowTitleBar();
 			case Parts.SIDEBAR_PART:
 				return !this.stateModel.getRuntimeValue(LayoutStateKeys.SIDEBAR_HIDDEN);
 			case Parts.PANEL_PART:
@@ -2095,7 +2135,7 @@ export abstract class Layout extends Disposable implements IWorkbenchLayoutServi
 						type: 'leaf',
 						data: { type: Parts.BANNER_PART },
 						size: bannerHeight,
-						visible: false
+						visible: true // The banner is never hidden
 					},
 					{
 						type: 'branch',

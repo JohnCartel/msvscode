@@ -43,7 +43,7 @@ import { IUriIdentityService } from 'vs/platform/uriIdentity/common/uriIdentity'
 import { IContextKey, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { Expression } from 'vs/workbench/contrib/debug/common/debugModel';
 import { registerColor } from 'vs/platform/theme/common/colorRegistry';
-import { addDisposableListener } from 'vs/base/browser/dom';
+import { addDisposableListener, isKeyboardEvent } from 'vs/base/browser/dom';
 import { DomEmitter } from 'vs/base/browser/event';
 import { ILanguageFeaturesService } from 'vs/editor/common/services/languageFeatures';
 import { IFeatureDebounceInformation, ILanguageFeatureDebounceService } from 'vs/editor/common/services/languageFeatureDebounce';
@@ -330,7 +330,7 @@ export class DebugEditorContribution implements IDebugEditorContribution {
 					const onKeyUp = new DomEmitter(document, 'keyup');
 					const listener = Event.any<KeyboardEvent | boolean>(this.hostService.onDidChangeFocus, onKeyUp.event)(keyupEvent => {
 						let standardKeyboardEvent = undefined;
-						if (keyupEvent instanceof KeyboardEvent) {
+						if (isKeyboardEvent(keyupEvent)) {
 							standardKeyboardEvent = new StandardKeyboardEvent(keyupEvent);
 						}
 						if (!standardKeyboardEvent || standardKeyboardEvent.keyCode === KeyCode.Alt) {

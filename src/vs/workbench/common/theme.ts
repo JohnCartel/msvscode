@@ -658,6 +658,12 @@ export const EXTENSION_BADGE_REMOTE_FOREGROUND = registerColor('extensionBadge.r
 
 
 // < --- Side Bar --- >
+export const SIDE_BAR_BACKGROUND1 = registerColor('sideBar.background1', {
+	dark: '#252526',
+	light: '#F3F3F3',
+	hcDark: '#000000',
+	hcLight: '#FFFFFF'
+}, localize('sideBarBackground', "Side bar background color. The side bar is the container for views like explorer and search."));
 
 export const SIDE_BAR_BACKGROUND = registerColor('sideBar.background', {
 	dark: '#252526',

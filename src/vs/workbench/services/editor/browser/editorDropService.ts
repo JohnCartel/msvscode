@@ -5,7 +5,7 @@
 
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { IDisposable } from 'vs/base/common/lifecycle';
-import { IEditorDropTargetDelegate } from 'vs/workbench/browser/parts/editor/editorDropTarget';
+import { IEditorDropTargetDelegate } from 'vs/workbench/services/editor/common/editorGroupsService';
 
 export const IEditorDropService = createDecorator<IEditorDropService>('editorDropService');
 

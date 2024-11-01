@@ -538,7 +538,7 @@ export class TestingExplorerViewModel extends Disposable {
 		}));
 
 		this._register(this.tree.onDidChangeSelection(evt => {
-			if (evt.browserEvent instanceof MouseEvent && (evt.browserEvent.altKey || evt.browserEvent.shiftKey)) {
+			if (dom.isMouseEvent(evt.browserEvent) && (evt.browserEvent.altKey || evt.browserEvent.shiftKey)) {
 				return; // don't focus when alt-clicking to multi select
 			}
 

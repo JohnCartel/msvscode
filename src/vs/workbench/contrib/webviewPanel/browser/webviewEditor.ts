@@ -20,7 +20,6 @@ import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { IOverlayWebview } from 'vs/workbench/contrib/webview/browser/webview';
 import { WebviewWindowDragMonitor } from 'vs/workbench/contrib/webview/browser/webviewWindowDragMonitor';
 import { WebviewInput } from 'vs/workbench/contrib/webviewPanel/browser/webviewEditorInput';
-import { IEditorDropService } from 'vs/workbench/services/editor/browser/editorDropService';
 import { IEditorGroup, IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
@@ -47,16 +46,20 @@ export class WebviewEditor extends EditorPane {
 		@ITelemetryService telemetryService: ITelemetryService,
 		@IThemeService themeService: IThemeService,
 		@IStorageService storageService: IStorageService,
-		@IEditorGroupsService editorGroupsService: IEditorGroupsService,
+		@IEditorGroupsService private readonly _editorGroupsService: IEditorGroupsService,
 		@IEditorService private readonly _editorService: IEditorService,
 		@IWorkbenchLayoutService private readonly _workbenchLayoutService: IWorkbenchLayoutService,
-		@IEditorDropService private readonly _editorDropService: IEditorDropService,
 		@IHostService private readonly _hostService: IHostService,
 		@IContextKeyService private readonly _contextKeyService: IContextKeyService,
 	) {
 		super(WebviewEditor.ID, telemetryService, themeService, storageService);
 
-		this._register(editorGroupsService.onDidScroll(() => {
+		this._register(Event.any(
+			_editorGroupsService.onDidScroll,
+			_editorGroupsService.onDidAddGroup,
+			_editorGroupsService.onDidRemoveGroup,
+			_editorGroupsService.onDidMoveGroup,
+		)(() => {
 			if (this.webview && this._visible) {
 				this.synchronizeWebviewContainerDimensions(this.webview);
 			}
@@ -74,6 +77,7 @@ export class WebviewEditor extends EditorPane {
 	protected createEditor(parent: HTMLElement): void {
 		const element = document.createElement('div');
 		this._element = element;
+		// 创建一个webview-editor-element-uuid的id   webview的element用于占位，但是webviewOverlay用于显示
 		this._element.id = `webview-editor-element-${generateUuid()}`;
 		parent.appendChild(element);
 
@@ -90,6 +94,13 @@ export class WebviewEditor extends EditorPane {
 	}
 
 	public override layout(dimension: DOM.Dimension): void {
+		// let webviewElement = this.webview?.container;
+		// let myDoc = this._element?.ownerDocument;
+		// if (myDoc && webviewElement && webviewElement.ownerDocument &&
+		// 	this._element?.ownerDocument !== webviewElement.ownerDocument) {
+		// 	// let parent = myDoc.querySelector('[role="application"]') as HTMLElement;
+		// 	// parent?.appendChild(webviewElement);
+		// }
 		this._dimension = dimension;
 		if (this.webview && this._visible) {
 			this.synchronizeWebviewContainerDimensions(this.webview, dimension);
@@ -135,6 +146,7 @@ export class WebviewEditor extends EditorPane {
 			return;
 		}
 
+		// 已经有了webviewOverlay对象（显示）
 		const alreadyOwnsWebview = input instanceof WebviewInput && input.webview === this.webview;
 		if (this.webview && !alreadyOwnsWebview) {
 			this.webview.release(this);
@@ -148,11 +160,13 @@ export class WebviewEditor extends EditorPane {
 		}
 
 		if (input instanceof WebviewInput) {
+			// 设置WebviewInput
 			if (this.group) {
 				input.updateGroup(this.group.id);
 			}
 
 			if (!alreadyOwnsWebview) {
+				// 创建webviewOverlay对象
 				this.claimWebview(input);
 			}
 			if (this._dimension) {
@@ -162,6 +176,7 @@ export class WebviewEditor extends EditorPane {
 	}
 
 	private claimWebview(input: WebviewInput): void {
+		input.webview.window = this._element?.ownerDocument.defaultView || window;
 		input.webview.claim(this, this.scopedContextKeyService);
 
 		if (this._element) {
@@ -172,7 +187,7 @@ export class WebviewEditor extends EditorPane {
 		this._webviewVisibleDisposables.clear();
 
 		// Webviews are not part of the normal editor dom, so we have to register our own drag and drop handler on them.
-		this._webviewVisibleDisposables.add(this._editorDropService.createEditorDropTarget(input.webview.container, {
+		this._webviewVisibleDisposables.add(this._editorGroupsService.createEditorDropTarget(input.webview.container, {
 			containsGroup: (group) => this.group?.id === group.id
 		}));
 
@@ -180,13 +195,23 @@ export class WebviewEditor extends EditorPane {
 
 		this.synchronizeWebviewContainerDimensions(input.webview);
 		this._webviewVisibleDisposables.add(this.trackFocus(input.webview));
+
 	}
 
 	private synchronizeWebviewContainerDimensions(webview: IOverlayWebview, dimension?: DOM.Dimension) {
 		if (!this._element) {
 			return;
 		}
-		const rootContainer = this._workbenchLayoutService.getContainer(Parts.EDITOR_PART);
+		// 这里，获取的是主窗口的EDITOR_PART位置，不适合副窗口
+		let rootContainer = this._workbenchLayoutService.getContainer(window, Parts.EDITOR_PART);
+		if (rootContainer && rootContainer.ownerDocument !== this._element.ownerDocument) {
+			if (this.webview) {
+				this.webview.window = this._element.ownerDocument.defaultView || window;
+			}
+			// 获取webview窗口（rootContainer）的位置
+			rootContainer = this._element.ownerDocument.querySelector(`[id = "${this.webview?.container.getAttribute('data-parent-flow-to-element-id')}"]`)?.parentElement as HTMLElement || undefined;
+		}
+		// 根据rootContainer的位置，重新设置webview的位置
 		webview.layoutWebviewOverElement(this._element.parentElement!, dimension, rootContainer);
 	}
 

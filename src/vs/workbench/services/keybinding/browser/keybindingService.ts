@@ -34,7 +34,7 @@ import { IExtensionService } from 'vs/workbench/services/extensions/common/exten
 import { MenuRegistry } from 'vs/platform/actions/common/actions';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { commandsExtensionPoint } from 'vs/workbench/services/actions/common/menusExtensionPoint';
-import { Disposable, DisposableStore } from 'vs/base/common/lifecycle';
+import { Disposable, DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { FileOperation, IFileService } from 'vs/platform/files/common/files';
 import { parse } from 'vs/base/common/json';
@@ -248,8 +248,64 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 		this.updateSchema();
 		this._register(extensionService.onDidRegisterExtensions(() => this.updateSchema()));
 
+		// 与下面的处理重复了（导致出窗口按一次键，响应两次），需要在dom中管理窗口和事件
 		// for standard keybindings
-		this._register(dom.addDisposableListener(window, dom.EventType.KEY_DOWN, (e: KeyboardEvent) => {
+		// this._register(dom.addDisposableListener(window, dom.EventType.KEY_DOWN, (e: KeyboardEvent) => {
+		// 	this.isComposingGlobalContextKey.set(e.isComposing);
+		// 	const keyEvent = new StandardKeyboardEvent(e);
+		// 	this._log(`/ Received  keydown event - ${printKeyboardEvent(e)}`);
+		// 	this._log(`| Converted keydown event - ${printStandardKeyboardEvent(keyEvent)}`);
+		// 	const shouldPreventDefault = this._dispatch(keyEvent, keyEvent.target);
+		// 	if (shouldPreventDefault) {
+		// 		keyEvent.preventDefault();
+		// 	}
+		// 	this.isComposingGlobalContextKey.set(false);
+		// }));
+
+		// // for single modifier chord keybindings (e.g. shift shift)
+		// this._register(dom.addDisposableListener(window, dom.EventType.KEY_UP, (e: KeyboardEvent) => {
+		// 	this.isComposingGlobalContextKey.set(e.isComposing);
+		// 	const keyEvent = new StandardKeyboardEvent(e);
+		// 	const shouldPreventDefault = this._singleModifierDispatch(keyEvent, keyEvent.target);
+		// 	if (shouldPreventDefault) {
+		// 		keyEvent.preventDefault();
+		// 	}
+		// 	this.isComposingGlobalContextKey.set(false);
+		// }));
+
+		//  ** TODO@rengy == 事件处理
+		this._register(this._registerKeyListeners(window));
+		this._register(dom.onDidCreateWindow(({ window, disposableStore }) => {
+			disposableStore.add(this._registerKeyListeners(window));
+		}));
+
+		this._register(browser.onDidChangeFullscreen(() => {
+			const keyboard: IKeyboard | null = (<INavigatorWithKeyboard>navigator).keyboard;
+
+			if (BrowserFeatures.keyboard === KeyboardSupport.None) {
+				return;
+			}
+
+			if (browser.isFullscreen()) {
+				keyboard?.lock(['Escape']);
+			} else {
+				keyboard?.unlock();
+			}
+
+			// update resolver which will bring back all unbound keyboard shortcuts
+			this._cachedResolver = null;
+			// todo@rengy check
+			// this._onDidUpdateKeybindings.fire({ source: KeybindingSource.User });
+			this._onDidUpdateKeybindings.fire();
+		}));
+	}
+
+	//  ** TODO@rengy == 事件处理
+	private _registerKeyListeners(window: Window): IDisposable {
+		const disposables = new DisposableStore();
+
+		// for standard keybindings
+		disposables.add(dom.addDisposableListener(window, dom.EventType.KEY_DOWN, (e: KeyboardEvent) => {
 			this.isComposingGlobalContextKey.set(e.isComposing);
 			const keyEvent = new StandardKeyboardEvent(e);
 			this._log(`/ Received  keydown event - ${printKeyboardEvent(e)}`);
@@ -262,7 +318,7 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 		}));
 
 		// for single modifier chord keybindings (e.g. shift shift)
-		this._register(dom.addDisposableListener(window, dom.EventType.KEY_UP, (e: KeyboardEvent) => {
+		disposables.add(dom.addDisposableListener(window, dom.EventType.KEY_UP, (e: KeyboardEvent) => {
 			this.isComposingGlobalContextKey.set(e.isComposing);
 			const keyEvent = new StandardKeyboardEvent(e);
 			const shouldPreventDefault = this._singleModifierDispatch(keyEvent, keyEvent.target);
@@ -287,8 +343,11 @@ export class WorkbenchKeybindingService extends AbstractKeybindingService {
 
 			// update resolver which will bring back all unbound keyboard shortcuts
 			this._cachedResolver = null;
+			// todo@rengy check
+			//this._onDidUpdateKeybindings.fire({ source: KeybindingSource.User });
 			this._onDidUpdateKeybindings.fire();
 		}));
+		return disposables;
 	}
 
 	public registerSchemaContribution(contribution: KeybindingsSchemaContribution): void {

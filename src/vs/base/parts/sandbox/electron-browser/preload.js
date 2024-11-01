@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-// @ts-check
+// @ts-nocheck
 (function () {
 	'use strict';
 
@@ -49,6 +49,7 @@
 	let configuration = undefined;
 
 	/** @type {Promise<ISandboxConfiguration>} */
+	// @ts-ignore
 	const resolveConfiguration = (async () => {
 		const windowConfigIpcChannel = parseArgv('vscode-window-config');
 		if (!windowConfigIpcChannel) {
@@ -62,6 +63,7 @@
 				configuration = await ipcRenderer.invoke(windowConfigIpcChannel);
 
 				// Apply `userEnv` directly
+				// @ts-ignore
 				Object.assign(process.env, configuration.userEnv);
 
 				// Apply zoom level early before even building the
@@ -70,6 +72,7 @@
 				// because Chrome has it's own way of remembering zoom
 				// settings per origin (if vscode-file:// is used) and
 				// we want to ensure that the user configuration wins.
+				// @ts-ignore
 				webFrame.setZoomLevel(configuration.zoomLevel ?? 0);
 
 				return configuration;

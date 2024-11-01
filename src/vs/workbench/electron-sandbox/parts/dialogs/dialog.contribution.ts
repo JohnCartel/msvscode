@@ -58,6 +58,7 @@ export class DialogHandlerContribution extends Disposable implements IWorkbenchC
 	}
 
 	private async processDialogs(): Promise<void> {
+		// console.log('显示对话框');
 		while (this.model.dialogs.length) {
 			this.currentDialog = this.model.dialogs[0];
 

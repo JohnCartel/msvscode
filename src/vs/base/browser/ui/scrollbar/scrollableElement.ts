@@ -365,7 +365,8 @@ export abstract class AbstractScrollableElement extends Widget {
 
 		const classifier = MouseWheelClassifier.INSTANCE;
 		if (SCROLL_WHEEL_SMOOTH_SCROLL_ENABLED) {
-			const osZoomFactor = window.devicePixelRatio / getZoomFactor();
+			const win = dom.getWindow(e.target);
+			const osZoomFactor = win.devicePixelRatio / getZoomFactor();
 			if (platform.isWindows || platform.isLinux) {
 				// On Windows and Linux, the incoming delta events are multiplied with the OS zoom factor.
 				// The OS zoom factor can be reverse engineered by using the device pixel ratio and the configured zoom factor into account.
@@ -563,7 +564,7 @@ export class ScrollableElement extends AbstractScrollableElement {
 		const scrollable = new Scrollable({
 			forceIntegerValues: true,
 			smoothScrollDuration: 0,
-			scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(callback)
+			scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(dom.getWindow(element), callback)
 		});
 		super(element, options, scrollable);
 		this._register(scrollable);
@@ -608,7 +609,7 @@ export class DomScrollableElement extends AbstractScrollableElement {
 		const scrollable = new Scrollable({
 			forceIntegerValues: false, // See https://github.com/microsoft/vscode/issues/139877
 			smoothScrollDuration: 0,
-			scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(callback)
+			scheduleAtNextAnimationFrame: (callback) => dom.scheduleAtNextAnimationFrame(dom.getWindow(element), callback)
 		});
 		super(element, options, scrollable);
 		this._register(scrollable);
@@ -632,8 +633,30 @@ export class DomScrollableElement extends AbstractScrollableElement {
 		return this._scrollable.getCurrentScrollPosition();
 	}
 
+	public printInheritedStyles(element: HTMLElement): string {
+		const win = dom.getWindow(element);
+		const computedStyles = win.getComputedStyle(element);
+		const inheritedStyles: { [key: string]: string } = {};
+		let style = '';
+
+		for (let i = 0; i < computedStyles.length; i++) {
+			const property = computedStyles[i];
+			const value = computedStyles.getPropertyValue(property);
+			inheritedStyles[property] = value;
+			style += `${property}: ${value}; `;
+		}
+
+		return `style: {${style}}`;
+	}
+
 	public scanDomNode(): void {
 		// width, scrollLeft, scrollWidth, height, scrollTop, scrollHeight
+		if (this._element.innerHTML.includes('monaco-action-bar')) {
+			let parent: any = this._element;
+			while (parent) {
+				parent = parent.parentElement;
+			}
+		}
 		this.setScrollDimensions({
 			width: this._element.clientWidth,
 			scrollWidth: this._element.scrollWidth,

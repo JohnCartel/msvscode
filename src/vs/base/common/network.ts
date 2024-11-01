@@ -241,6 +241,27 @@ class FileAccessImpl {
 		return uri;
 	}
 
+	/**
+	 * Returns the `file` URI to use in contexts where node.js
+	 * is responsible for loading.
+	 */
+	uriToFileUri(uri: URI): URI {
+		// Only convert the URI if it is `vscode-file:` scheme
+		if (uri.scheme === Schemas.vscodeFileResource) {
+			return uri.with({
+				scheme: Schemas.file,
+				// Only preserve the `authority` if it is different from
+				// our fallback authority. This ensures we properly preserve
+				// Windows UNC paths that come with their own authority.
+				authority: uri.authority !== FileAccessImpl.FALLBACK_AUTHORITY ? uri.authority : null,
+				query: null,
+				fragment: null
+			});
+		}
+
+		return uri;
+	}
+
 	private toUri(uriOrModule: URI | string, moduleIdToUrl?: { toUrl(moduleId: string): string }): URI {
 		if (URI.isUri(uriOrModule)) {
 			return uriOrModule;

@@ -109,6 +109,8 @@ export interface WebviewInitInfo {
 	readonly contentOptions: WebviewContentOptions;
 
 	readonly extension: WebviewExtensionDescription | undefined;
+	readonly window?: Window;
+	readonly container?: HTMLElement;
 }
 
 interface WebviewActionContext {
@@ -134,6 +136,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	 */
 	public readonly origin: string;
 
+
 	/**
 	 * Unique internal identifier of this webview's iframe element.
 	 */
@@ -154,7 +157,8 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 		if (!this._focused) {
 			return false;
 		}
-		if (document.activeElement && document.activeElement !== this.element) {
+
+		if (this.window.document.activeElement && this.window.document.activeElement !== this.element) {
 			// looks like https://github.com/microsoft/vscode/issues/132641
 			// where the focus is actually not in the `<iframe>`
 			return false;
@@ -187,6 +191,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 
 	private _disposed = false;
 
+	readonly window: Window;
 
 	public extension: WebviewExtensionDescription | undefined;
 	private readonly options: WebviewOptions;
@@ -231,10 +236,15 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			this._tunnelService
 		));
 
+		// frame元素
 		this._element = this.createElement(initInfo.options, initInfo.contentOptions);
+		initInfo.container?.appendChild(this._element);
 
+		// console.log('创建一个div容器, 挂载到workbench节点上');
 
-		const subscription = this._register(addDisposableListener(window, 'message', (e: MessageEvent) => {
+		this.window = initInfo.container?.ownerDocument.defaultView || window;
+
+		const subscription = this._register(addDisposableListener(this.window, 'message', (e: MessageEvent) => {
 			if (!this.encodedWebviewOrigin || e?.data?.target !== this.iframeId) {
 				return;
 			}
@@ -488,6 +498,7 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 	private createElement(options: WebviewOptions, _contentOptions: WebviewContentOptions) {
 		// Do not start loading the webview yet.
 		// Wait the end of the ctor when all listeners have been hooked up.
+		// 创建frame元素
 		const element = document.createElement('iframe');
 		element.name = this.id;
 		element.className = `webview ${options.customClasses || ''}`;
@@ -558,11 +569,12 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			}));
 		});
 
-		[parent, window].forEach(node => this._register(addDisposableListener(node as HTMLElement, EventType.DRAG_END, () => {
+		[parent, parent.ownerDocument.defaultView || window].forEach(node => this._register(addDisposableListener(node as HTMLElement, EventType.DRAG_END, () => {
 			this.stopBlockingIframeDragEvents();
 		})));
 
-		parent.appendChild(this.element);
+		// 把它移动到了构造函数中
+		// parent.appendChild(this.element);
 	}
 
 	private startBlockingIframeDragEvents() {
@@ -771,7 +783,8 @@ export class WebviewElement extends Disposable implements IWebview, WebviewFindD
 			get: () => this.element,
 		});
 		// And re-dispatch
-		window.dispatchEvent(emulatedKeyboardEvent);
+		// window.dispatchEvent(emulatedKeyboardEvent);
+		(this._element?.ownerDocument.defaultView || window).dispatchEvent(emulatedKeyboardEvent);
 	}
 
 	windowDidDragStart(): void {

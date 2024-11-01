@@ -364,6 +364,8 @@ class ShowAboutDialogAction extends Action2 {
 	override run(accessor: ServicesAccessor): Promise<void> {
 		const dialogService = accessor.get(IDialogService);
 
+		// console.log('show about dialog:', dialogService.constructor.name);
+		// 显示about对话框
 		return dialogService.about();
 	}
 }

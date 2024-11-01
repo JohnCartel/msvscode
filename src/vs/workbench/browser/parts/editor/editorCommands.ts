@@ -37,6 +37,7 @@ import { IEditorResolverService } from 'vs/workbench/services/editor/common/edit
 import { IPathService } from 'vs/workbench/services/path/common/pathService';
 import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { extname } from 'vs/base/common/resources';
+import { getActiveElement } from 'vs/base/browser/dom';
 
 export const CLOSE_SAVED_EDITORS_COMMAND_ID = 'workbench.action.closeUnmodifiedEditors';
 export const CLOSE_EDITORS_IN_GROUP_COMMAND_ID = 'workbench.action.closeEditorsInGroup';
@@ -78,6 +79,7 @@ export const SPLIT_EDITOR_IN_GROUP = 'workbench.action.splitEditorInGroup';
 export const TOGGLE_SPLIT_EDITOR_IN_GROUP = 'workbench.action.toggleSplitEditorInGroup';
 export const JOIN_EDITOR_IN_GROUP = 'workbench.action.joinEditorInGroup';
 export const TOGGLE_SPLIT_EDITOR_IN_GROUP_LAYOUT = 'workbench.action.toggleSplitEditorInGroupLayout';
+export const MOVE_EDITOR_INTO_NEW_WINDOW_COMMAND_ID = 'workbench.action.moveEditorIntoNewWindowAction';
 
 export const FOCUS_FIRST_SIDE_EDITOR = 'workbench.action.focusFirstSideEditor';
 export const FOCUS_SECOND_SIDE_EDITOR = 'workbench.action.focusSecondSideEditor';
@@ -1330,6 +1332,7 @@ function registerOtherEditorCommands(): void {
 		}
 	});
 
+
 	KeybindingsRegistry.registerCommandAndKeybindingRule({
 		id: PIN_EDITOR_COMMAND_ID,
 		weight: KeybindingWeight.WorkbenchContrib,
@@ -1442,7 +1445,7 @@ export function getMultiSelectedEditorContexts(editorContext: IEditorCommandsCon
 
 	// First check for a focused list to return the selected items from
 	const list = listService.lastFocusedList;
-	if (list instanceof List && list.getHTMLElement() === document.activeElement) {
+	if (list instanceof List && list.getHTMLElement() === getActiveElement()) {
 		const elementToContext = (element: IEditorIdentifier | IEditorGroup) => {
 			if (isEditorGroup(element)) {
 				return { groupId: element.id, editorIndex: undefined };

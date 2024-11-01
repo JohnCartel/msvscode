@@ -5,23 +5,24 @@
 
 import 'vs/css!./media/bannerpart';
 import { localize } from 'vs/nls';
-import { $, addDisposableListener, append, asCSSUrl, clearNode, EventType } from 'vs/base/browser/dom';
+import { $, addDisposableListener, append, asCSSUrl, clearNode, EventHelper, EventType, prepend } from 'vs/base/browser/dom';
 import { ActionBar } from 'vs/base/browser/ui/actionbar/actionbar';
+import { EventType as TouchEventType, GestureEvent } from 'vs/base/browser/touch';
 import { Codicon } from 'vs/base/common/codicons';
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IThemeService, registerThemingParticipant, ThemeIcon } from 'vs/platform/theme/common/themeService';
+import { TITLE_BAR_BORDER } from 'vs/workbench/common/theme';
 import { Part } from 'vs/workbench/browser/part';
 import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
-import { Action } from 'vs/base/common/actions';
+import { Action, IAction, Separator } from 'vs/base/common/actions';
 import { Link } from 'vs/platform/opener/browser/link';
 import { MarkdownString } from 'vs/base/common/htmlContent';
 import { Emitter } from 'vs/base/common/event';
 import { IBannerItem, IBannerService } from 'vs/workbench/services/banner/browser/bannerService';
 import { MarkdownRenderer } from 'vs/editor/contrib/markdownRenderer/browser/markdownRenderer';
-import { BANNER_BACKGROUND, BANNER_FOREGROUND, BANNER_ICON_FOREGROUND } from 'vs/workbench/common/theme';
-import { Action2, registerAction2 } from 'vs/platform/actions/common/actions';
+import { Action2, IMenuService, IMenu, MenuId, MenuRegistry, registerAction2, SubmenuItemAction } from 'vs/platform/actions/common/actions';
 import { CATEGORIES } from 'vs/workbench/common/actions';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { KeyCode } from 'vs/base/common/keyCodes';
@@ -29,33 +30,189 @@ import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { URI } from 'vs/base/common/uri';
 import { widgetClose } from 'vs/platform/theme/common/iconRegistry';
 import { BannerFocused } from 'vs/workbench/common/contextkeys';
+import { ICommandService } from 'vs/platform/commands/common/commands';
+import { ActivityAction } from 'vs/workbench/browser/parts/compositeBarActions';
+import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
+import { IActivity } from 'vs/workbench/common/activity';
+import { ActionViewItem, BaseActionViewItem } from 'vs/base/browser/ui/actionbar/actionViewItems';
+import { DisposableStore } from 'vs/base/common/lifecycle';
+import { createAndFillInActionBarActions } from 'vs/platform/actions/browser/menuEntryActionViewItem';
+import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
+import { mnemonicMenuLabel } from 'vs/base/common/labels';
+import product from 'vs/platform/product/common/product';
+
+MenuRegistry.appendMenuItem(MenuId.GlobalActivity, { command: { id: 'undo', title: 'Test ABCD' }, when: undefined, group: 'navigation' });
 
 // Theme support
-
 registerThemingParticipant((theme, collector) => {
-	const backgroundColor = theme.getColor(BANNER_BACKGROUND);
-	if (backgroundColor) {
-		collector.addRule(`.monaco-workbench .part.banner { background-color: ${backgroundColor}; }`);
-	}
-
-	const foregroundColor = theme.getColor(BANNER_FOREGROUND);
-	if (foregroundColor) {
+	const titleBorder = theme.getColor(TITLE_BAR_BORDER);
+	if (titleBorder) {
 		collector.addRule(`
-			.monaco-workbench .part.banner,
-			.monaco-workbench .part.banner .action-container .codicon,
-			.monaco-workbench .part.banner .message-actions-container .monaco-link,
-			.monaco-workbench .part.banner .message-container a
-			{ color: ${foregroundColor}; }
+			.maintoolbar {
+				border-bottom: 1px solid var(--vscode-panel-border);
+				box-sizing: border-box;
+				height: 33px;
+			}
 		`);
 	}
-
-	const iconForegroundColor = theme.getColor(BANNER_ICON_FOREGROUND);
-	if (iconForegroundColor) {
-		collector.addRule(`.monaco-workbench .part.banner .icon-container .codicon { color: ${iconForegroundColor} }`);
+	else {
+		collector.addRule(`
+			.maintoolbar {
+				border-bottom: 1px solid var(--vscode-panel-border);
+				border-top: 1px solid var(--vscode-panel-border);
+				box-sizing: border-box;
+				height: 33px;
+			}
+		`);
 	}
 });
 
 
+
+export class ToolbarActions {
+	private static actionMenuMap: Map<string, Action> = new Map();
+
+	constructor() {
+	}
+
+	static add(id: string, action: Action) {
+		ToolbarActions.actionMenuMap.set(id, action);
+	}
+
+	static getMenuId(id: string): MenuId | undefined {
+		// 只有MyAction才有getMenuId方法，返回的ID才有意义
+		return (this.actionMenuMap.get(id) as MyAction)?.getMenuId();
+	}
+}
+
+class MyAction extends ActivityAction {
+
+	constructor(id: string, label: string = '', private menuId?: MenuId, cssClass: string = '', keybindingId?: string, iconUrl?: URI, enabled: boolean = true) {
+		super({ id: id, name: label, cssClass: cssClass, keybindingId: keybindingId, iconUrl: iconUrl });
+		ToolbarActions.add(id, this);
+	}
+
+	public getMenuId(): MenuId | undefined {
+		return this.menuId;
+	}
+}
+
+export class MyMenuItem extends BaseActionViewItem {
+	protected container!: HTMLElement;
+	protected label!: HTMLElement;
+	constructor(
+		action: ActivityAction,
+		private menuId: MenuId,
+		@IMenuService private menuService: IMenuService,
+		@IContextMenuService private contextMenuService: IContextMenuService,
+		@IContextKeyService private contextKeyService: IContextKeyService,
+		// @IConfigurationService private configurationService: IConfigurationService
+	) {
+		super(null, action);
+	}
+
+	protected async resolveMainMenuActions(menu: IMenu, disposables: DisposableStore): Promise<IAction[]> {
+		const actions: IAction[] = [];
+
+		// todo@rengy check
+		// disposables.add(createAndFillInActionBarActions(menu, undefined, { primary: [], secondary: actions }));
+		createAndFillInActionBarActions(menu, undefined, { primary: [], secondary: actions });
+
+		return actions;
+	}
+
+	async showContextMenu(e?: MouseEvent): Promise<void> {
+		const disposables = new DisposableStore();
+
+		// let actions: IAction[];
+
+		// MenubarViewMenu
+		// 在这里添加ContextMenu
+		const menu = disposables.add(this.menuService.createMenu(this.menuId, this.contextKeyService));
+		const actions = await this.resolveMainMenuActions(menu, disposables);
+		for (let i = actions.length - 1; i >= 0; i--) {
+			const value = actions[i];
+			// 过滤空的子菜单
+			if (value instanceof SubmenuItemAction) {
+				if (value.actions.length === 0) {
+					actions.splice(i, 1);
+					continue;
+				}
+			}
+			// && -> &
+			actions[i].label = mnemonicMenuLabel(value.label);
+		}
+		actions.filter(value => { return !(value instanceof SubmenuItemAction && value.actions.length === 0); });
+
+		const isUsingCustomMenu = true;
+		// const position = this.configurationService.getValue('workbench.sideBar.location');
+
+		this.contextMenuService.showContextMenu({
+			getAnchor: () => isUsingCustomMenu ? this.container : e || this.container,
+			// anchorAlignment: isUsingCustomMenu ? (position === 'left' ? AnchorAlignment.RIGHT : AnchorAlignment.LEFT) : undefined,
+			// anchorAxisAlignment: isUsingCustomMenu ? AnchorAxisAlignment.HORIZONTAL : AnchorAxisAlignment.VERTICAL,
+			getActions: () => actions,
+			getActionViewItem: (action) => {
+				const customActionViewItem = <any>action;
+				if (typeof customActionViewItem.getActionViewItem === 'function') {
+					return customActionViewItem.getActionViewItem();
+				}
+
+				return new ActionViewItem(action, action, { icon: true, label: true, isMenu: true });
+			},
+			onHide: () => disposables.dispose()
+		});
+	}
+
+	// 显示ActionViewItem(工具栏按钮)
+	override render(container: HTMLElement): void {
+		super.render(container);
+
+		this.container = container;
+		this.container.classList.add('icon');
+
+		// this.container.style.backgroundColor = "#ff0000";
+
+		// Try hard to prevent keyboard only focus feedback when using mouse
+		this._register(addDisposableListener(this.container, EventType.MOUSE_DOWN, () => {
+			this.container.classList.add('clicked');
+		}));
+
+		// Label
+		this.label = append(container, $('a'));
+		this.label.className = 'action-label';
+		if (this.activity?.cssClass) {
+			this.label.classList.add(...this.activity.cssClass.split(' '));
+		}
+		this.label.classList.add('codicon');
+		this.label.setAttribute('aria-label', this.action.label);
+		this.label.setAttribute('title', this.action.label);
+		this._register(addDisposableListener(this.container, EventType.MOUSE_DOWN, (e: MouseEvent) => {
+			EventHelper.stop(e, true);
+			this.showContextMenu(e);
+		}));
+
+		this._register(addDisposableListener(this.container, EventType.KEY_UP, (e: KeyboardEvent) => {
+			const event = new StandardKeyboardEvent(e);
+			if (event.equals(KeyCode.Enter) || event.equals(KeyCode.Space)) {
+				EventHelper.stop(e, true);
+				this.showContextMenu();
+			}
+		}));
+
+		this._register(addDisposableListener(this.container, TouchEventType.Tap, (e: GestureEvent) => {
+			EventHelper.stop(e, true);
+			this.showContextMenu();
+		}));
+
+		// pane composite bar active border + background
+		append(container, $('.active-item-indicator'));
+	}
+
+	protected get activity(): IActivity {
+		return (this._action as ActivityAction).activity;
+	}
+}
 // Banner Part
 
 export class BannerPart extends Part implements IBannerService {
@@ -64,7 +221,7 @@ export class BannerPart extends Part implements IBannerService {
 
 	// #region IView
 
-	readonly height: number = 26;
+	height: number = 60;
 	readonly minimumWidth: number = 0;
 	readonly maximumWidth: number = Number.POSITIVE_INFINITY;
 
@@ -83,11 +240,13 @@ export class BannerPart extends Part implements IBannerService {
 
 	private item: IBannerItem | undefined;
 	private readonly markdownRenderer: MarkdownRenderer;
-	private visible = false;
+	private visible = true;
 
 	private actionBar: ActionBar | undefined;
 	private messageActionsContainer: HTMLElement | undefined;
 	private focusedActionIndex: number = -1;
+
+	private msgElement: HTMLElement | null = null;
 
 	constructor(
 		@IThemeService themeService: IThemeService,
@@ -95,6 +254,11 @@ export class BannerPart extends Part implements IBannerService {
 		@IStorageService storageService: IStorageService,
 		@IContextKeyService private readonly contextKeyService: IContextKeyService,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
+		// @IEditorService private readonly editorService: IEditorService,
+		// @ITextModelService private readonly textModelService: ITextModelService,
+		@IContextMenuService readonly contextMenuService: IContextMenuService,
+		@IMenuService readonly menuService: IMenuService,
+		@ICommandService private readonly commandService: ICommandService
 	) {
 		super(Parts.BANNER_PART, { hasTitle: false }, themeService, storageService, layoutService);
 
@@ -104,6 +268,11 @@ export class BannerPart extends Part implements IBannerService {
 	override createContentArea(parent: HTMLElement): HTMLElement {
 		this.element = parent;
 		this.element.tabIndex = 0;
+		// this.element.innerText = "BANNER";
+		// "text-align: right;top: 30px;height: 50px;align-items: center;"
+		// this.element.style.textAlign = "left";
+		// this.element.style.alignItems = "center";
+		// this.element.style.fontSize = "48";
 
 		// Restore focused action if needed
 		this._register(addDisposableListener(this.element, EventType.FOCUS, () => {
@@ -111,6 +280,7 @@ export class BannerPart extends Part implements IBannerService {
 				this.focusActionLink();
 			}
 		}));
+		this.showToolbar();
 
 		// Track focus
 		const scopedContextKeyService = this.contextKeyService.createScoped(this.element);
@@ -121,16 +291,17 @@ export class BannerPart extends Part implements IBannerService {
 
 	private close(item: IBannerItem): void {
 		// Hide banner
-		this.setVisibility(false);
+		// this.setVisibility(false);
 
 		// Remove from document
 		clearNode(this.element);
+		this.showToolbar();
 
 		// Remember choice
 		if (typeof item.onClose === 'function') {
 			item.onClose();
 		}
-
+		this._onDidChangeSize.fire(undefined);
 		this.item = undefined;
 	}
 
@@ -211,19 +382,26 @@ export class BannerPart extends Part implements IBannerService {
 			this.setVisibility(true);
 			return;
 		}
-
 		// Clear previous item
-		clearNode(this.element);
+		this.showToolbar();
+
+		console.log(`显示Message:${item.message}`);
+
+		if (this.msgElement === null) {
+			this.msgElement = append(this.element, $('div.msg'));
+		}
 
 		// Banner aria label
 		const ariaLabel = this.getAriaLabel(item);
 		if (ariaLabel) {
-			this.element.setAttribute('aria-label', ariaLabel);
+			this.msgElement.setAttribute('aria-label', ariaLabel);
 		}
 
 		// Icon
-		const iconContainer = append(this.element, $('div.icon-container'));
+		const iconContainer = append(this.msgElement, $('div.icon-container'));
 		iconContainer.setAttribute('aria-hidden', 'true');
+
+		// this.element.style.cssText = '* { font-size: 48px; }';
 
 		if (item.icon instanceof Codicon) {
 			iconContainer.appendChild($(`div${item.icon.cssSelector}`));
@@ -236,12 +414,12 @@ export class BannerPart extends Part implements IBannerService {
 		}
 
 		// Message
-		const messageContainer = append(this.element, $('div.message-container'));
+		const messageContainer = append(this.msgElement, $('div.message-container'));
 		messageContainer.setAttribute('aria-hidden', 'true');
 		messageContainer.appendChild(this.getBannerMessage(item.message));
 
 		// Message Actions
-		this.messageActionsContainer = append(this.element, $('div.message-actions-container'));
+		this.messageActionsContainer = append(this.msgElement, $('div.message-actions-container'));
 		if (item.actions) {
 			for (const action of item.actions) {
 				this._register(this.instantiationService.createInstance(Link, this.messageActionsContainer, { ...action, tabIndex: -1 }, {}));
@@ -249,14 +427,104 @@ export class BannerPart extends Part implements IBannerService {
 		}
 
 		// Action
-		const actionBarContainer = append(this.element, $('div.action-container'));
+		const actionBarContainer = append(this.msgElement, $('div.action-container'));
 		this.actionBar = this._register(new ActionBar(actionBarContainer));
+
 		const closeAction = this._register(new Action('banner.close', 'Close Banner', ThemeIcon.asClassName(widgetClose), true, () => this.close(item)));
 		this.actionBar.push(closeAction, { icon: true, label: false });
 		this.actionBar.setFocusable(false);
 
 		this.setVisibility(true);
 		this.item = item;
+
+		this.height += 26;
+		this._onDidChangeSize.fire(undefined);
+	}
+
+	showToolbar(): void {
+
+		this.height = 33;
+
+		this.element.style.textAlign = 'left';
+		this.element.style.alignItems = 'top';
+		this.element.style.fontSize = '24';
+
+		// let style = $('style.ToolsStyle'); //document.createElement('style');
+		// this.setStyle(parent.ownerDocument, style);
+
+		// Clear previous item
+		clearNode(this.element);
+
+		const tools = prepend(this.element, $('div.maintoolbar'));
+
+		// Action
+		const actionBarContainer = append(tools, $('div.action-container'));
+
+		this.makeActionBar(actionBarContainer);
+
+		this.setVisibility(true);
+		// this.visible = true;
+	}
+
+	private makeActionBar(actionBarContainer: HTMLElement) {
+
+		const actionBar = this._register(new ActionBar(actionBarContainer, {
+			// 返回button的ActionViewItem
+			actionViewItemProvider: action => {
+				const menuId = ToolbarActions.getMenuId(action.id);
+				// todo@rengy 重构
+				// 如果按钮按下后，会处触发菜单，创建菜单按钮
+				if (menuId) {
+					return this.instantiationService.createInstance(MyMenuItem, action as ActivityAction, menuId);
+				}
+				return undefined;
+			}
+		}));
+
+		const actions = this.GetActions();
+
+		for (let i = 0; i < actions.length; i++) {
+			const action = this._register(actions[i]);
+			if (action.id === 'divider') {
+				actionBar.push(action, { icon: false, label: true });
+			}
+			else {
+				actionBar.push(action, { icon: true, label: false });
+			}
+			actionBar.setFocusable(false);
+		}
+	}
+
+	GetActions(): Action[] {
+		const actions: Action[] = [];
+
+		const buttons = product.mainToolbarActions;
+
+		if (buttons && buttons.length > 0) {
+			buttons.sort((a, b) => {
+				const groupA = a.group ?? '';
+				const groupB = b.group ?? '';
+				return groupA === groupB ? 0 : groupA < groupB ? -1 : 1;
+			});
+
+			let lastGroup: string | undefined = buttons[0].group;
+			buttons.forEach(button => {
+				if (lastGroup !== button.group) {
+					actions.push(new Separator());
+					lastGroup = button.group;
+				}
+				if (button.menuId) {
+					const action = new MyAction(button.id, button.label, MenuId.getMenuIdbyId(button.menuId), button.iconClass);
+					actions.push(action);
+				} else if (button.commandId) {
+					const
+						action = new Action(button.id, button.label, button.iconClass, true, async () => this.commandService.executeCommand(button.commandId!));
+					actions.push(action);
+				}
+			});
+		}
+
+		return actions;
 	}
 
 	toJSON(): object {

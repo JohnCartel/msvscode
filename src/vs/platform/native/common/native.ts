@@ -2,7 +2,7 @@
  *  Copyright (c) Microsoft Corporation. All rights reserved.
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
-
+// todo@rengy 同步check
 import { VSBuffer } from 'vs/base/common/buffer';
 import { Event } from 'vs/base/common/event';
 import { URI } from 'vs/base/common/uri';
@@ -74,7 +74,15 @@ export interface ICommonNativeHostService {
 	unmaximizeWindow(): Promise<void>;
 	minimizeWindow(): Promise<void>;
 
+	/**
+	 * Only supported on Windows and macOS. Updates the window controls to match the title bar size.
+	 *
+	 * @param options `backgroundColor` and `foregroundColor` are only supported on Windows
+	 */
+	// updateWindowControls(options: { height?: number; backgroundColor?: string; foregroundColor?: string }): Promise<void>;
+	// 这里名称和参数都修改了
 	updateTitleBarOverlay(options: { height?: number; backgroundColor?: string; foregroundColor?: string }): Promise<void>;
+	updateAuxTitleBarOverlay(backgroundColor: string, foregroundColor: string): Promise<void>;
 
 	setMinimumSize(width: number | undefined, height: number | undefined): Promise<void>;
 

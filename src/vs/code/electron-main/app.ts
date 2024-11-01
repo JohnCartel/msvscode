@@ -89,8 +89,8 @@ import { ElectronURLListener } from 'vs/platform/url/electron-main/electronUrlLi
 import { IWebviewManagerService } from 'vs/platform/webview/common/webviewManagerService';
 import { WebviewMainService } from 'vs/platform/webview/electron-main/webviewMainService';
 import { IWindowOpenable } from 'vs/platform/window/common/window';
-import { IWindowsMainService, OpenContext } from 'vs/platform/windows/electron-main/windows';
-import { ICodeWindow, WindowError } from 'vs/platform/window/electron-main/window';
+import { defaultBrowserWindowOptions, IWindowsMainService, OpenContext, updateWindow, UpdateWindowEvent } from 'vs/platform/windows/electron-main/windows';
+import { defaultWindowState, ICodeWindow, WindowError } from 'vs/platform/window/electron-main/window';
 import { WindowsMainService } from 'vs/platform/windows/electron-main/windowsMainService';
 import { ActiveWindowManager } from 'vs/platform/windows/node/windowTracker';
 import { hasWorkspaceFileExtension } from 'vs/platform/workspace/common/workspace';
@@ -330,22 +330,42 @@ export class CodeApplication extends Disposable {
 			}
 		});
 
+		app.on('browser-window-created', (event, window: BrowserWindow) => {
+			// console.log("browser-window-created", window.id);
+			updateWindow(window, UpdateWindowEvent.Create);
+			window.on('close', () => {
+				updateWindow(window, UpdateWindowEvent.Close);
+			});
+		});
+
 		//#region Security related measures (https://electronjs.org/docs/tutorial/security)
 		//
 		// !!! DO NOT CHANGE without consulting the documentation !!!
 		//
 		app.on('web-contents-created', (event, contents) => {
 
-			contents.on('will-navigate', event => {
-				this.logService.error('webContents#will-navigate: Prevented webcontent navigation');
+			// contents.on('will-navigate', event => {
+			// 	this.logService.error('webContents#will-navigate: Prevented webcontent navigation');
 
-				event.preventDefault();
-			});
+			// 	event.preventDefault();
+			// });
 
-			contents.setWindowOpenHandler(({ url }) => {
-				this.nativeHostMainService?.openExternal(undefined, url);
-
-				return { action: 'deny' };
+			// 打开副窗口时，不显示标题栏
+			const configurationService = this.configurationService;
+			contents.setWindowOpenHandler(() => {
+				return {
+					action: 'allow',
+					overrideBrowserWindowOptions:
+						this.mainInstantiationService.invokeFunction(
+							defaultBrowserWindowOptions,
+							false,
+							defaultWindowState(),
+							{
+								titleBarOverlay: {
+									height: configurationService.getValue('window.auxWindow.hasTitle') !== false ? 30 : 35
+								}
+							})
+				};
 			});
 		});
 

@@ -12,11 +12,35 @@ import { onUnexpectedError } from 'vs/base/common/errors';
 import * as event from 'vs/base/common/event';
 import * as dompurify from 'vs/base/browser/dompurify/dompurify';
 import { KeyCode } from 'vs/base/common/keyCodes';
-import { Disposable, DisposableStore, IDisposable, toDisposable } from 'vs/base/common/lifecycle';
+import { Disposable, DisposableStore, IDisposable, combinedDisposable, toDisposable } from 'vs/base/common/lifecycle';
 import { FileAccess, RemoteAuthorities, Schemas } from 'vs/base/common/network';
 import * as platform from 'vs/base/common/platform';
 import { withNullAsUndefined } from 'vs/base/common/types';
 import { URI } from 'vs/base/common/uri';
+
+export const { onDidCreateWindow, registerWindow, getWindows } = (function () {
+	const windows: Window[] = [];
+	const onDidCreateWindow = new event.Emitter<{ window: Window; disposableStore: DisposableStore }>();
+	return {
+		onDidCreateWindow: onDidCreateWindow.event,
+		registerWindow(window: Window): IDisposable {
+			windows.push(window);
+			const disposableStore = new DisposableStore();
+			disposableStore.add(toDisposable(() => {
+				// 把它从列表中删除
+				const index = windows.indexOf(window);
+				if (index !== -1) {
+					windows.splice(index, 1);
+				}
+			}));
+			onDidCreateWindow.fire({ window, disposableStore }); //
+			return disposableStore;
+		},
+		getWindows(): Window[] {
+			return windows;
+		}
+	};
+})();
 
 export function clearNode(node: HTMLElement): void {
 	while (node.firstChild) {
@@ -141,26 +165,42 @@ export function createEventEmitter<K extends keyof HTMLElementEventMap>(target: 
 	return result;
 }
 
-interface IRequestAnimationFrame {
-	(callback: (time: number) => void): number;
-}
-let _animationFrame: IRequestAnimationFrame | null = null;
-function doRequestAnimationFrame(callback: (time: number) => void): number {
-	if (!_animationFrame) {
-		const emulatedRequestAnimationFrame = (callback: (time: number) => void): any => {
-			return setTimeout(() => callback(new Date().getTime()), 0);
-		};
-		_animationFrame = (
-			self.requestAnimationFrame
-			|| (<any>self).msRequestAnimationFrame
-			|| (<any>self).webkitRequestAnimationFrame
-			|| (<any>self).mozRequestAnimationFrame
-			|| (<any>self).oRequestAnimationFrame
-			|| emulatedRequestAnimationFrame
-		);
-	}
-	return _animationFrame.call(self, callback);
-}
+// 下面这三个方案，都受到最小化窗口影响，会导致动画卡顿
+// 方案一：使用setTimeout代替requestAnimationFrame
+// function doRequestAnimationFrame(callback: () => void) {
+// 	let currentTime = Date.now();
+// 	let timeToCall = Math.max(0, currentTime % 17);
+// 	setTimeout(() => callback(), timeToCall);
+// }
+// 方案二：使用setInterval代替requestAnimationFrame
+// function doRequestAnimationFrame(callback: () => void) {
+// 	let id = setInterval(() => {
+// 		callback();
+// 		clearInterval(id);
+// 	}, 1000 / 60);
+// }
+// 方案三：使用requestAnimationFrame
+// interface IRequestAnimationFrame {
+// 	(callback: (time: number) => void): number;
+// }
+// let _animationFrame: IRequestAnimationFrame | null = null;
+// function doRequestAnimationFrame(callback: (time: number) => void): number {
+// 	if (!_animationFrame) {
+// 		const emulatedRequestAnimationFrame = (callback: (time: number) => void): any => {
+// 			return setTimeout(() => callback(new Date().getTime()), 0);
+// 		};
+// 		_animationFrame = (
+// 			self.requestAnimationFrame
+// 			|| (<any>self).msRequestAnimationFrame
+// 			|| (<any>self).webkitRequestAnimationFrame
+// 			|| (<any>self).mozRequestAnimationFrame
+// 			|| (<any>self).oRequestAnimationFrame
+// 			|| emulatedRequestAnimationFrame
+// 		);
+// 	}
+// 	return _animationFrame.call(self, callback);
+// }
+
 
 /**
  * Schedule a callback to be run at the next animation frame.
@@ -168,14 +208,14 @@ function doRequestAnimationFrame(callback: (time: number) => void): number {
  * If currently in an animation frame, `runner` will be executed immediately.
  * @return token that can be used to cancel the scheduled runner (only if `runner` was not executed immediately).
  */
-export let runAtThisOrScheduleAtNextAnimationFrame: (runner: () => void, priority?: number) => IDisposable;
+export let runAtThisOrScheduleAtNextAnimationFrame: (target: Window, runner: () => void, priority?: number) => IDisposable;
 /**
  * Schedule a callback to be run at the next animation frame.
  * This allows multiple parties to register callbacks that should run at the next animation frame.
  * If currently in an animation frame, `runner` will be executed at the next animation frame.
  * @return token that can be used to cancel the scheduled runner.
  */
-export let scheduleAtNextAnimationFrame: (runner: () => void, priority?: number) => IDisposable;
+export let scheduleAtNextAnimationFrame: (target: Window, runner: () => void, priority?: number) => IDisposable;
 
 class AnimationFrameQueueItem implements IDisposable {
 
@@ -183,7 +223,7 @@ class AnimationFrameQueueItem implements IDisposable {
 	public priority: number;
 	private _canceled: boolean;
 
-	constructor(runner: () => void, priority: number = 0) {
+	constructor(public readonly target: Window, runner: () => void, priority: number = 0) {
 		this._runner = runner;
 		this.priority = priority;
 		this._canceled = false;
@@ -221,16 +261,11 @@ class AnimationFrameQueueItem implements IDisposable {
 	 */
 	let CURRENT_QUEUE: AnimationFrameQueueItem[] | null = null;
 	/**
-	 * A flag to keep track if the native requestAnimationFrame was already called
-	 */
-	let animFrameRequested = false;
-	/**
 	 * A flag to indicate if currently handling a native requestAnimationFrame callback
 	 */
 	let inAnimationFrameRunner = false;
 
 	const animationFrameRunner = () => {
-		animFrameRequested = false;
 
 		CURRENT_QUEUE = NEXT_QUEUE;
 		NEXT_QUEUE = [];
@@ -244,35 +279,32 @@ class AnimationFrameQueueItem implements IDisposable {
 		inAnimationFrameRunner = false;
 	};
 
-	scheduleAtNextAnimationFrame = (runner: () => void, priority: number = 0) => {
-		const item = new AnimationFrameQueueItem(runner, priority);
-		NEXT_QUEUE.push(item);
+	scheduleAtNextAnimationFrame = (target: Window, runner: () => void, priority: number = 0) => {
+		const item = new AnimationFrameQueueItem(target, runner, priority);
 
-		if (!animFrameRequested) {
-			animFrameRequested = true;
-			doRequestAnimationFrame(animationFrameRunner);
-		}
+		NEXT_QUEUE.push(item);
+		item.target.requestAnimationFrame(animationFrameRunner);
 
 		return item;
 	};
 
-	runAtThisOrScheduleAtNextAnimationFrame = (runner: () => void, priority?: number) => {
+	runAtThisOrScheduleAtNextAnimationFrame = (target: Window, runner: () => void, priority?: number) => {
 		if (inAnimationFrameRunner) {
-			const item = new AnimationFrameQueueItem(runner, priority);
+			const item = new AnimationFrameQueueItem(target, runner, priority);
 			CURRENT_QUEUE!.push(item);
 			return item;
 		} else {
-			return scheduleAtNextAnimationFrame(runner, priority);
+			return scheduleAtNextAnimationFrame(target, runner, priority);
 		}
 	};
 })();
 
-export function measure(callback: () => void): IDisposable {
-	return scheduleAtNextAnimationFrame(callback, 10000 /* must be early */);
+export function measure(target: Window, callback: () => void): IDisposable {
+	return scheduleAtNextAnimationFrame(target, callback, 10000 /* must be early */);
 }
 
-export function modify(callback: () => void): IDisposable {
-	return scheduleAtNextAnimationFrame(callback, -10000 /* must be late */);
+export function modify(target: Window, callback: () => void): IDisposable {
+	return scheduleAtNextAnimationFrame(target, callback, -10000 /* must be late */);
 }
 
 /**
@@ -321,12 +353,15 @@ export function addDisposableThrottledListener<R, E extends Event = Event>(node:
 	return new TimeoutThrottledDomListener<R, E>(node, type, handler, eventMerger, minimumTimeMs);
 }
 
-export function getComputedStyle(el: HTMLElement): CSSStyleDeclaration {
+export function getComputedStyle(el: HTMLElement, doc = document): CSSStyleDeclaration {
+	const document = doc;
 	return document.defaultView!.getComputedStyle(el, null);
 }
 
-export function getClientArea(element: HTMLElement): Dimension {
+export function getClientArea(element: HTMLElement, doc = document, win = window): Dimension {
 
+	const document = doc;
+	const window = win;
 	// Try with DOM clientWidth / clientHeight
 	if (element !== document.body) {
 		return new Dimension(element.clientWidth, element.clientHeight);
@@ -363,7 +398,7 @@ class SizeUtils {
 	}
 
 	private static getDimension(element: HTMLElement, cssPropertyName: string, jsPropertyName: string): number {
-		const computedStyle: CSSStyleDeclaration = getComputedStyle(element);
+		const computedStyle: CSSStyleDeclaration = getComputedStyle(element, element.ownerDocument || document);
 		let value = '0';
 		if (computedStyle) {
 			if (computedStyle.getPropertyValue) {
@@ -540,9 +575,10 @@ export function position(element: HTMLElement, top: number, right?: number, bott
  */
 export function getDomNodePagePosition(domNode: HTMLElement): IDomNodePagePosition {
 	const bb = domNode.getBoundingClientRect();
+	const win = getWindow(domNode);
 	return {
-		left: bb.left + StandardWindow.scrollX,
-		top: bb.top + StandardWindow.scrollY,
+		left: bb.left + win.scrollX,
+		top: bb.top + win.scrollY,
 		width: bb.width,
 		height: bb.height
 	};
@@ -554,6 +590,7 @@ export function getDomNodePagePosition(domNode: HTMLElement): IDomNodePagePositi
 export function getDomNodeZoomLevel(domNode: HTMLElement): number {
 	let testElement: HTMLElement | null = domNode;
 	let zoom = 1.0;
+	const document = getWindow(domNode).document;
 	do {
 		const elementZoomLevel = (getComputedStyle(testElement) as any).zoom;
 		if (elementZoomLevel !== null && elementZoomLevel !== undefined && elementZoomLevel !== '1') {
@@ -668,6 +705,7 @@ export function setParentFlowTo(fromChildElement: HTMLElement, toParentElement: 
 
 function getParentFlowToElement(node: HTMLElement): HTMLElement | null {
 	const flowToParentId = node.dataset[parentFlowToDataKey];
+	const document = getWindow(node).document;
 	if (typeof flowToParentId === 'string') {
 		return document.getElementById(flowToParentId);
 	}
@@ -737,6 +775,7 @@ export function isInShadowDOM(domNode: Node): boolean {
 }
 
 export function getShadowRoot(domNode: Node): ShadowRoot | null {
+	const document = getWindow(domNode).document;
 	while (domNode.parentNode) {
 		if (domNode === document.body) {
 			// reached the body
@@ -747,6 +786,7 @@ export function getShadowRoot(domNode: Node): ShadowRoot | null {
 	return isShadowRoot(domNode) ? domNode : null;
 }
 
+//
 export function getActiveElement(): Element | null {
 	let result = document.activeElement;
 
@@ -755,6 +795,55 @@ export function getActiveElement(): Element | null {
 	}
 
 	return result;
+}
+
+/**
+ * Returns the active document across all child windows.
+ * Use this instead of `document` when reacting to dom events to handle multiple windows.
+ */
+export function getActiveDocument(): Document {
+	const documents = [document, ...getWindows().map(w => w.document)];
+	return documents.find(doc => doc.hasFocus()) ?? document;
+}
+
+export function getActiveWindow(): Window & typeof globalThis {
+	const document = getActiveDocument();
+	return document.defaultView?.window ?? window;
+}
+
+export function isAuxWindow(e: unknown): boolean {
+	const candidateWindow = getWindow(e);
+	return candidateWindow !== window;
+}
+
+export function printInheritedStyles(element: HTMLElement): string {
+	const win = getWindow(element);
+	const computedStyles = win.getComputedStyle(element);
+	const inheritedStyles: { [key: string]: string } = {};
+	let style = '';
+
+	for (let i = 0; i < computedStyles.length; i++) {
+		const property = computedStyles[i];
+		const value = computedStyles.getPropertyValue(property);
+		inheritedStyles[property] = value;
+		style += `${property}: ${value}; `;
+	}
+
+	return `style: {${style}}`;
+}
+
+export function getWindow(e: unknown): Window & typeof globalThis {
+	const candidateNode = e as Node | undefined;
+	if (candidateNode?.ownerDocument?.defaultView) {
+		return candidateNode.ownerDocument.defaultView.window;
+	}
+
+	const candidateEvent = e as UIEvent | undefined;
+	if (candidateEvent?.view) {
+		return candidateEvent.view.window;
+	}
+
+	return window;
 }
 
 export function createStyleSheet(container: HTMLElement = document.getElementsByTagName('head')[0]): HTMLStyleElement {
@@ -819,10 +908,31 @@ export function removeCSSRulesContainingSelector(ruleName: string, style: HTMLSt
 }
 
 export function isHTMLElement(o: any): o is HTMLElement {
-	if (typeof HTMLElement === 'object') {
-		return o instanceof HTMLElement;
-	}
-	return o && typeof o === 'object' && o.nodeType === 1 && typeof o.nodeName === 'string';
+	// if (typeof HTMLElement === 'object') {
+	// 	return o instanceof HTMLElement;
+	// }
+	// return o && typeof o === 'object' && o.nodeType === 1 && typeof o.nodeName === 'string';
+	return o instanceof HTMLElement;
+}
+
+export function isMouseEvent(e: unknown): e is MouseEvent {
+	// eslint-disable-next-line no-restricted-syntax
+	return e instanceof MouseEvent || e instanceof getWindow(e).MouseEvent;
+}
+
+export function isKeyboardEvent(e: unknown): e is KeyboardEvent {
+	// eslint-disable-next-line no-restricted-syntax
+	return e instanceof KeyboardEvent || e instanceof getWindow(e).KeyboardEvent;
+}
+
+export function isPointerEvent(e: unknown): e is PointerEvent {
+	// eslint-disable-next-line no-restricted-syntax
+	return e instanceof PointerEvent || e instanceof getWindow(e).PointerEvent;
+}
+
+export function isDragEvent(e: unknown): e is DragEvent {
+	// eslint-disable-next-line no-restricted-syntax
+	return e instanceof DragEvent || e instanceof getWindow(e).DragEvent;
 }
 
 export const EventType = {
@@ -945,15 +1055,18 @@ class FocusTracker extends Disposable implements IFocusTracker {
 
 	private _refreshStateHandler: () => void;
 
-	private static hasFocusWithin(element: HTMLElement): boolean {
-		const shadowRoot = getShadowRoot(element);
-		const activeElement = (shadowRoot ? shadowRoot.activeElement : document.activeElement);
-		return isAncestor(activeElement, element);
+	private static hasFocusWithin(element: HTMLElement | Window): boolean {
+		if (element instanceof HTMLElement) {
+			const shadowRoot = getShadowRoot(element);
+			const activeElement = (shadowRoot ? shadowRoot.activeElement : element.ownerDocument.activeElement);
+			return isAncestor(activeElement, element);
+		}
+		return isAncestor(element.document.activeElement, element.document);
 	}
 
 	constructor(element: HTMLElement | Window) {
 		super();
-		let hasFocus = FocusTracker.hasFocusWithin(<HTMLElement>element);
+		let hasFocus = FocusTracker.hasFocusWithin(element);
 		let loosingFocus = false;
 
 		const onFocus = () => {
@@ -990,8 +1103,11 @@ class FocusTracker extends Disposable implements IFocusTracker {
 
 		this._register(addDisposableListener(element, EventType.FOCUS, onFocus, true));
 		this._register(addDisposableListener(element, EventType.BLUR, onBlur, true));
-		this._register(addDisposableListener(element, EventType.FOCUS_IN, () => this._refreshStateHandler()));
-		this._register(addDisposableListener(element, EventType.FOCUS_OUT, () => this._refreshStateHandler()));
+		if (element instanceof HTMLElement) {
+			this._register(addDisposableListener(element, EventType.FOCUS_IN, () => this._refreshStateHandler()));
+			this._register(addDisposableListener(element, EventType.FOCUS_OUT, () => this._refreshStateHandler()));
+		}
+
 	}
 
 	refreshState() {
@@ -999,6 +1115,12 @@ class FocusTracker extends Disposable implements IFocusTracker {
 	}
 }
 
+/**
+ * Creates a new `IFocusTracker` instance that tracks focus changes on the given `element` and its descendants.
+ *
+ * @param element The `HTMLElement` or `Window` to track focus changes on.
+ * @returns An `IFocusTracker` instance.
+ */
 export function trackFocus(element: HTMLElement | Window): IFocusTracker {
 	return new FocusTracker(element);
 }
@@ -1142,7 +1264,7 @@ export function removeTabIndexAndUpdateFocus(node: HTMLElement): void {
 	if (!node || !node.hasAttribute('tabIndex')) {
 		return;
 	}
-
+	const document = getWindow(node).document;
 	// If we are the currently focused element and tabIndex is removed,
 	// standard DOM behavior is to move focus to the <body> element. We
 	// typically never want that, rather put focus to the closest element
@@ -1157,7 +1279,10 @@ export function removeTabIndexAndUpdateFocus(node: HTMLElement): void {
 	node.removeAttribute('tabindex');
 }
 
-export function getElementsByTagName(tag: string): HTMLElement[] {
+export function getElementsByTagName(tag: string, doc: Document | undefined): HTMLElement[] {
+	if (doc) {
+		return Array.prototype.slice.call(doc.getElementsByTagName(tag), 0);
+	}
 	return Array.prototype.slice.call(document.getElementsByTagName(tag), 0);
 }
 
@@ -1169,6 +1294,7 @@ export function finalHandler<T extends Event>(fn: (event: T) => any): (event: T)
 	};
 }
 
+//
 export function domContentLoaded(): Promise<unknown> {
 	return new Promise<unknown>(resolve => {
 		const readyState = document.readyState;
@@ -1227,8 +1353,8 @@ export function windowOpenNoOpener(url: string): void {
  */
 const popupWidth = 780, popupHeight = 640;
 export function windowOpenPopup(url: string): void {
-	const left = Math.floor(window.screenLeft + window.innerWidth / 2 - popupWidth / 2);
-	const top = Math.floor(window.screenTop + window.innerHeight / 2 - popupHeight / 2);
+	const left = 0; //Math.floor(window.screenLeft + window.innerWidth / 2 - popupWidth / 2);
+	const top = 0; //Math.floor(window.screenTop + window.innerHeight / 2 - popupHeight / 2);
 	window.open(
 		url,
 		'_blank',
@@ -1264,13 +1390,13 @@ export function windowOpenWithSuccess(url: string, noOpener = true): boolean {
 	return false;
 }
 
-export function animate(fn: () => void): IDisposable {
+export function animate(target: Window, fn: () => void): IDisposable {
 	const step = () => {
 		fn();
-		stepDisposable = scheduleAtNextAnimationFrame(step);
+		stepDisposable = scheduleAtNextAnimationFrame(target, step);
 	};
 
-	let stepDisposable = scheduleAtNextAnimationFrame(step);
+	let stepDisposable = scheduleAtNextAnimationFrame(target, step);
 	return toDisposable(() => stepDisposable.dispose());
 }
 
@@ -1290,6 +1416,7 @@ export function asCSSPropertyValue(value: string) {
 	return `'${value.replace(/'/g, '%27')}'`;
 }
 
+//
 export function triggerDownload(dataOrUri: Uint8Array | URI, name: string): void {
 
 	// If the data is provided as Buffer, we create a
@@ -1319,6 +1446,7 @@ export function triggerDownload(dataOrUri: Uint8Array | URI, name: string): void
 	setTimeout(() => document.body.removeChild(anchor));
 }
 
+//
 export function triggerUpload(): Promise<FileList | undefined> {
 	return new Promise<FileList | undefined>(resolve => {
 
@@ -1371,6 +1499,7 @@ export interface IDetectedFullscreen {
 	guess: boolean;
 }
 
+//
 export function detectFullscreen(): IDetectedFullscreen | null {
 
 	// Browser fullscreen: use DOM APIs to detect
@@ -1411,6 +1540,7 @@ export function detectFullscreen(): IDetectedFullscreen | null {
  * Hooks dompurify using `afterSanitizeAttributes` to check that all `href` and `src`
  * attributes are valid.
  */
+//
 export function hookDomPurifyHrefAndSrcSanitizer(allowedProtocols: readonly string[], allowDataImages = false): IDisposable {
 	// https://github.com/cure53/DOMPurify/blob/main/demos/hooks-scheme-allowlist.html
 
@@ -1508,6 +1638,8 @@ export interface IModifierKeyStatus {
 	event?: KeyboardEvent;
 }
 
+//
+// 这是一个单件？
 export class ModifierKeyEmitter extends event.Emitter<IModifierKeyStatus> {
 
 	private readonly _subscriptions = new DisposableStore();
@@ -1658,10 +1790,14 @@ export function getCookieValue(name: string): string | undefined {
 }
 
 export interface IDragAndDropObserverCallbacks {
-	readonly onDragEnter: (e: DragEvent) => void;
-	readonly onDragLeave: (e: DragEvent) => void;
-	readonly onDrop: (e: DragEvent) => void;
-	readonly onDragEnd: (e: DragEvent) => void;
+	//
+	readonly onDragStart?: (e: DragEvent) => void;
+	readonly onDrag?: (e: DragEvent) => void;
+
+	readonly onDragEnter?: (e: DragEvent) => void;
+	readonly onDragLeave?: (e: DragEvent) => void;
+	readonly onDrop?: (e: DragEvent) => void;
+	readonly onDragEnd?: (e: DragEvent) => void;
 	readonly onDragOver?: (e: DragEvent, dragDuration: number) => void;
 }
 
@@ -1683,11 +1819,23 @@ export class DragAndDropObserver extends Disposable {
 	}
 
 	private registerListeners(): void {
+		if (this.callbacks.onDragStart) {
+			this._register(addDisposableListener(this.element, EventType.DRAG_START, (e: DragEvent) => {
+				this.callbacks.onDragStart?.(e);
+			}));
+		}
+
+		if (this.callbacks.onDrag) {
+			this._register(addDisposableListener(this.element, EventType.DRAG, (e: DragEvent) => {
+				this.callbacks.onDrag?.(e);
+			}));
+		}
+
 		this._register(addDisposableListener(this.element, EventType.DRAG_ENTER, (e: DragEvent) => {
 			this.counter++;
 			this.dragStartTime = e.timeStamp;
 
-			this.callbacks.onDragEnter(e);
+			this.callbacks.onDragEnter?.(e);
 		}));
 
 		this._register(addDisposableListener(this.element, EventType.DRAG_OVER, (e: DragEvent) => {
@@ -1701,23 +1849,20 @@ export class DragAndDropObserver extends Disposable {
 
 			if (this.counter === 0) {
 				this.dragStartTime = 0;
-
-				this.callbacks.onDragLeave(e);
+				this.callbacks.onDragLeave?.(e);
 			}
 		}));
 
 		this._register(addDisposableListener(this.element, EventType.DRAG_END, (e: DragEvent) => {
 			this.counter = 0;
 			this.dragStartTime = 0;
-
-			this.callbacks.onDragEnd(e);
+			this.callbacks.onDragEnd?.(e);
 		}));
 
 		this._register(addDisposableListener(this.element, EventType.DROP, (e: DragEvent) => {
 			this.counter = 0;
 			this.dragStartTime = 0;
-
-			this.callbacks.onDrop(e);
+			this.callbacks.onDrop?.(e);
 		}));
 	}
 }
@@ -1883,4 +2028,60 @@ export function h(tag: string, ...args: [] | [attributes: { $: string } & Partia
 
 function camelCaseToHyphenCase(str: string) {
 	return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+}
+
+
+interface IObserver extends IDisposable {
+	readonly onDidChangeAttribute: event.Event<string>;
+}
+
+function observeAttributes(element: Element, filter?: string[]): IObserver {
+	const onDidChangeAttribute = new event.Emitter<string>();
+
+	const observer = new MutationObserver(mutations => {
+		for (const mutation of mutations) {
+			if (mutation.type === 'attributes' && mutation.attributeName) {
+				onDidChangeAttribute.fire(mutation.attributeName);
+			}
+		}
+	});
+
+	observer.observe(element, {
+		attributes: true,
+		attributeFilter: filter
+	});
+
+	return {
+		onDidChangeAttribute: onDidChangeAttribute.event,
+		dispose: () => {
+			observer.disconnect();
+			onDidChangeAttribute.dispose();
+		}
+	};
+}
+
+export function copyAttributes(from: Element, to: Element): void {
+	for (const { name, value } of from.attributes) {
+		to.setAttribute(name, value);
+	}
+}
+
+function copyAttribute(from: Element, to: Element, name: string): void {
+	const value = from.getAttribute(name);
+	if (value) {
+		to.setAttribute(name, value);
+	} else {
+		to.removeAttribute(name);
+	}
+}
+
+export function trackAttributes(from: Element, to: Element, filter?: string[]): IDisposable {
+	copyAttributes(from, to);
+
+	const observer = observeAttributes(from, filter);
+
+	return combinedDisposable(
+		observer,
+		observer.onDidChangeAttribute(name => copyAttribute(from, to, name))
+	);
 }

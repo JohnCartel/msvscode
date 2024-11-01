@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IContextMenuProvider } from 'vs/base/browser/contextmenu';
-import { $, addDisposableListener, append, EventHelper, EventType } from 'vs/base/browser/dom';
+import { $, addDisposableListener, append, EventHelper, EventType, isMouseEvent } from 'vs/base/browser/dom';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { EventType as GestureEventType, Gesture } from 'vs/base/browser/touch';
 import { AnchorAlignment, IAnchor, IContextViewProvider } from 'vs/base/browser/ui/contextview/contextview';
@@ -56,10 +56,8 @@ export class BaseDropdown extends ActionRunner {
 
 		for (const event of [EventType.MOUSE_DOWN, GestureEventType.Tap]) {
 			this._register(addDisposableListener(this._label, event, e => {
-				if (e instanceof MouseEvent && (e.detail > 1 || e.button !== 0)) {
-					// prevent right click trigger to allow separate context menu (https://github.com/microsoft/vscode/issues/151064)
-					// prevent multiple clicks to open multiple context menus (https://github.com/microsoft/vscode/issues/41363)
-					return;
+				if (isMouseEvent(e) && e.detail > 1) {
+					return; // prevent multiple clicks to open multiple context menus (https://github.com/microsoft/vscode/issues/41363)
 				}
 
 				if (this.visible) {
@@ -220,7 +218,7 @@ export class DropdownMenu extends BaseDropdown {
 	private _actions: readonly IAction[] = [];
 	private actionProvider?: IActionProvider;
 	private menuClassName: string;
-	private menuAsChild?: boolean;
+	private menuAsChild?: boolean = true;
 
 	constructor(container: HTMLElement, options: IDropdownMenuOptions) {
 		super(container, options);
@@ -267,7 +265,7 @@ export class DropdownMenu extends BaseDropdown {
 			onHide: () => this.onHide(),
 			actionRunner: this.menuOptions ? this.menuOptions.actionRunner : undefined,
 			anchorAlignment: this.menuOptions ? this.menuOptions.anchorAlignment : AnchorAlignment.LEFT,
-			domForShadowRoot: this.menuAsChild ? this.element : undefined
+			domForShadowRoot: this.menuAsChild ? this.element : this.element ? this.element : undefined
 		});
 	}
 

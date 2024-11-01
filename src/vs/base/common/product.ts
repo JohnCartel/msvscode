@@ -12,6 +12,26 @@ export interface IBuiltInExtension {
 	readonly metadata: any;
 }
 
+export interface IButtonActionBase {
+	id: string;
+	label: string;
+	iconClass: string;
+	group?: string;
+	menuId?: string;
+	checked?: boolean;
+	enabled?: boolean;
+}
+
+export interface IButtonActionCommand {
+	commandId: string;
+}
+
+export interface IButtonActionMenu {
+	menuId: string;
+}
+
+export type IButtonAction = IButtonActionBase & Partial<IButtonActionCommand> & Partial<IButtonActionMenu>;
+
 export type ConfigurationSyncStore = {
 	url: string;
 	insidersUrl: string;
@@ -65,6 +85,9 @@ export interface IProductConfiguration {
 		featuresTelemetryPropertyName: string;
 		assignmentContextTelemetryPropertyName: string;
 	};
+
+	// interface IButtonAction
+	readonly mainToolbarActions?: IButtonAction[];
 
 	readonly experimentsUrl?: string;
 

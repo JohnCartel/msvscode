@@ -73,6 +73,7 @@ export class DialogService extends Disposable implements IDialogService {
 			throw new Error('DialogService: refused to show about dialog in tests.');
 		}
 
+		// console.log('about对话框:', this.model.constructor.name);
 		const handle = this.model.show({});
 		await handle.result;
 	}

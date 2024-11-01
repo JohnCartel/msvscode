@@ -41,7 +41,7 @@ import 'vs/workbench/api/browser/viewsExtensionPoint';
 //#region --- workbench parts
 
 import 'vs/workbench/browser/parts/editor/editor.contribution';
-import 'vs/workbench/browser/parts/editor/editorPart';
+import 'vs/workbench/browser/parts/editor/editorParts';
 import 'vs/workbench/browser/parts/paneCompositePart';
 import 'vs/workbench/browser/parts/banner/bannerPart';
 import 'vs/workbench/browser/parts/statusbar/statusbarPart';
@@ -99,6 +99,7 @@ import 'vs/workbench/services/assignment/common/assignmentService';
 import 'vs/workbench/services/outline/browser/outlineService';
 import 'vs/workbench/services/languageDetection/browser/languageDetectionWorkerServiceImpl';
 import 'vs/editor/common/services/languageFeaturesService';
+import 'vs/workbench/services/auxiliaryWindow/browser/auxiliaryWindowService';
 
 import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
 import { ExtensionGalleryService } from 'vs/platform/extensionManagement/common/extensionGalleryService';

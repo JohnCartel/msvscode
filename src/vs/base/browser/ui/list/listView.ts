@@ -5,7 +5,7 @@
 
 import { isFirefox } from 'vs/base/browser/browser';
 import { DataTransfers, IDragAndDropData, StaticDND } from 'vs/base/browser/dnd';
-import { $, addDisposableListener, animate, getContentHeight, getContentWidth, getTopLeftOffset, scheduleAtNextAnimationFrame } from 'vs/base/browser/dom';
+import { $, addDisposableListener, animate, getContentHeight, getContentWidth, getTopLeftOffset, getWindow, scheduleAtNextAnimationFrame } from 'vs/base/browser/dom';
 import { DomEmitter } from 'vs/base/browser/event';
 import { IMouseWheelEvent } from 'vs/base/browser/mouseEvent';
 import { EventType as TouchEventType, Gesture, GestureEvent } from 'vs/base/browser/touch';
@@ -344,7 +344,7 @@ export class ListView<T> implements ISpliceable<T>, IDisposable {
 		this.scrollable = new Scrollable({
 			forceIntegerValues: true,
 			smoothScrollDuration: (options.smoothScrolling ?? false) ? 125 : 0,
-			scheduleAtNextAnimationFrame: cb => scheduleAtNextAnimationFrame(cb)
+			scheduleAtNextAnimationFrame: cb => scheduleAtNextAnimationFrame(getWindow(this.rowsContainer), cb)
 		});
 		this.scrollableElement = this.disposables.add(new SmoothScrollableElement(this.rowsContainer, {
 			alwaysConsumeMouseWheel: options.alwaysConsumeMouseWheel ?? DefaultOptions.alwaysConsumeMouseWheel,
@@ -586,11 +586,12 @@ export class ListView<T> implements ISpliceable<T>, IDisposable {
 		this.rowsContainer.style.height = `${this._scrollHeight}px`;
 
 		if (!this.scrollableElementUpdateDisposable) {
-			this.scrollableElementUpdateDisposable = scheduleAtNextAnimationFrame(() => {
-				this.scrollableElement.setScrollDimensions({ scrollHeight: this.scrollHeight });
-				this.updateScrollWidth();
-				this.scrollableElementUpdateDisposable = null;
-			});
+			this.scrollableElementUpdateDisposable = scheduleAtNextAnimationFrame(
+				getWindow(this.rowsContainer), () => {
+					this.scrollableElement.setScrollDimensions({ scrollHeight: this.scrollHeight });
+					this.updateScrollWidth();
+					this.scrollableElementUpdateDisposable = null;
+				});
 		}
 	}
 
@@ -1174,7 +1175,7 @@ export class ListView<T> implements ISpliceable<T>, IDisposable {
 	private setupDragAndDropScrollTopAnimation(event: DragEvent): void {
 		if (!this.dragOverAnimationDisposable) {
 			const viewTop = getTopLeftOffset(this.domNode).top;
-			this.dragOverAnimationDisposable = animate(this.animateDragAndDropScrollTop.bind(this, viewTop));
+			this.dragOverAnimationDisposable = animate(getWindow(this.rowsContainer), this.animateDragAndDropScrollTop.bind(this, viewTop));
 		}
 
 		this.dragOverAnimationStopDisposable.dispose();

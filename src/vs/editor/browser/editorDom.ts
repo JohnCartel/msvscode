@@ -162,6 +162,7 @@ export class EditorMouseEventFactory {
 
 	public onMouseDown(target: HTMLElement, callback: (e: EditorMouseEvent) => void): IDisposable {
 		return dom.addDisposableListener(target, dom.EventType.MOUSE_DOWN, (e: MouseEvent) => {
+			// console.log('onMouseDown', e);
 			callback(this._create(e));
 		});
 	}
@@ -179,7 +180,11 @@ export class EditorMouseEventFactory {
 	}
 
 	public onMouseMove(target: HTMLElement, callback: (e: EditorMouseEvent) => void): IDisposable {
-		return dom.addDisposableListener(target, 'mousemove', (e) => callback(this._create(e)));
+		return dom.addDisposableListener(target, 'mousemove',
+			(e) => {
+				return callback(this._create(e));
+			}
+		);
 	}
 }
 

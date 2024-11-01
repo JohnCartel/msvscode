@@ -766,6 +766,7 @@ export class CodeEditorWidget extends Disposable implements editorBrowser.ICodeE
 	public setSelection(selection: ISelection, source?: string): void;
 	public setSelection(editorSelection: Selection, source?: string): void;
 	public setSelection(something: any, source: string = 'api'): void {
+		// console.log("setSelection===>");
 		const isSelection = Selection.isISelection(something);
 		const isRange = Range.isIRange(something);
 
@@ -1632,7 +1633,7 @@ export class CodeEditorWidget extends Disposable implements editorBrowser.ICodeE
 			model,
 			DOMLineBreaksComputerFactory.create(),
 			MonospaceLineBreaksComputerFactory.create(this._configuration.options),
-			(callback) => dom.scheduleAtNextAnimationFrame(callback),
+			(callback) => dom.scheduleAtNextAnimationFrame(dom.getWindow(this._domElement), callback),
 			this.languageConfigurationService,
 			this._themeService
 		);

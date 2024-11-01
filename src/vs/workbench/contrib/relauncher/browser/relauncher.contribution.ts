@@ -141,12 +141,13 @@ export class SettingsChangeRelauncher extends Disposable implements IWorkbenchCo
 	}
 
 	private async doConfirm(message: string, detail: string, primaryButton: string, confirmed: () => void): Promise<void> {
-		if (this.hostService.hasFocus) {
-			const res = await this.dialogService.confirm({ type: 'info', message, detail, primaryButton });
-			if (res.confirmed) {
-				confirmed();
-			}
+		// @rengy 在这里判断是否是焦点窗口，没有意义，不是焦点窗口也要弹窗
+		// if (this.hostService.hasFocus) {
+		const res = await this.dialogService.confirm({ type: 'info', message, detail, primaryButton });
+		if (res.confirmed) {
+			confirmed();
 		}
+		// }
 	}
 }
 

@@ -4,12 +4,12 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IContextMenuDelegate } from 'vs/base/browser/contextmenu';
-import { $, addDisposableListener, EventType, isHTMLElement } from 'vs/base/browser/dom';
+import { $, addDisposableListener, EventType, getActiveElement, getWindow, isAncestor, isHTMLElement } from 'vs/base/browser/dom';
 import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
 import { Menu } from 'vs/base/browser/ui/menu/menu';
 import { ActionRunner, IRunEvent, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from 'vs/base/common/actions';
 import { isCancellationError } from 'vs/base/common/errors';
-import { combinedDisposable, DisposableStore } from 'vs/base/common/lifecycle';
+import { combinedDisposable, DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { IContextViewService } from 'vs/platform/contextview/browser/contextView';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { INotificationService } from 'vs/platform/notification/common/notification';
@@ -17,14 +17,15 @@ import { ITelemetryService } from 'vs/platform/telemetry/common/telemetry';
 import { attachMenuStyler } from 'vs/platform/theme/common/styler';
 import { IThemeService } from 'vs/platform/theme/common/themeService';
 
-
 export interface IContextMenuHandlerOptions {
 	blockMouse: boolean;
 }
 
 export class ContextMenuHandler {
 	private focusToReturn: HTMLElement | null = null;
+	private lastContainer: HTMLElement | null = null;
 	private block: HTMLElement | null = null;
+	private blockDisposable: IDisposable | null = null;
 	private options: IContextMenuHandlerOptions = { blockMouse: true };
 
 	constructor(
@@ -45,7 +46,8 @@ export class ContextMenuHandler {
 			return; // Don't render an empty context menu
 		}
 
-		this.focusToReturn = document.activeElement as HTMLElement;
+		const doc = delegate.domForShadowRoot?.ownerDocument || document;
+		this.focusToReturn = doc.activeElement as HTMLElement;
 
 		let menu: Menu | undefined;
 
@@ -57,6 +59,8 @@ export class ContextMenuHandler {
 			anchorAxisAlignment: delegate.anchorAxisAlignment,
 
 			render: (container) => {
+				this.lastContainer = container;
+				// 显示右键菜单
 				const className = delegate.getMenuClassName ? delegate.getMenuClassName() : '';
 
 				if (className) {
@@ -74,6 +78,9 @@ export class ContextMenuHandler {
 					this.block.style.height = '100%';
 					this.block.style.zIndex = '-1';
 
+					this.blockDisposable?.dispose();
+					this.blockDisposable = addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
+
 					// TODO@Steven: this is never getting disposed
 					addDisposableListener(this.block, EventType.MOUSE_DOWN, e => e.stopPropagation());
 				}
@@ -83,6 +90,8 @@ export class ContextMenuHandler {
 				const actionRunner = delegate.actionRunner || new ActionRunner();
 				actionRunner.onBeforeRun(this.onActionRun, this, menuDisposables);
 				actionRunner.onDidRun(this.onDidActionRun, this, menuDisposables);
+
+				// 创建右键菜单(Menu)
 				menu = new Menu(container, actions, {
 					actionViewItemProvider: delegate.getActionViewItem,
 					context: delegate.getActionsContext ? delegate.getActionsContext() : null,
@@ -92,10 +101,16 @@ export class ContextMenuHandler {
 
 				menuDisposables.add(attachMenuStyler(menu, this.themeService));
 
+
 				menu.onDidCancel(() => this.contextViewService.hideContextView(true), null, menuDisposables);
 				menu.onDidBlur(() => this.contextViewService.hideContextView(true), null, menuDisposables);
-				menuDisposables.add(addDisposableListener(window, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
-				menuDisposables.add(addDisposableListener(window, EventType.MOUSE_DOWN, (e: MouseEvent) => {
+				// 设置隐藏右键菜单的事件
+				const targetWindow = getWindow(container);
+				menuDisposables.add(addDisposableListener(targetWindow, EventType.BLUR, () => this.contextViewService.hideContextView(true)));
+				if (global.window !== targetWindow) {
+					menuDisposables.add(addDisposableListener(targetWindow, EventType.RESIZE, () => this.contextViewService.hideContextView(true)));
+				}
+				menuDisposables.add(addDisposableListener(targetWindow, EventType.MOUSE_DOWN, (e: MouseEvent) => {
 					if (e.defaultPrevented) {
 						return;
 					}
@@ -134,9 +149,14 @@ export class ContextMenuHandler {
 					this.block = null;
 				}
 
-				if (this.focusToReturn) {
-					this.focusToReturn.focus();
+				this.blockDisposable?.dispose();
+				this.blockDisposable = null;
+
+				if (!!this.lastContainer && (getActiveElement() === this.lastContainer || isAncestor(getActiveElement(), this.lastContainer))) {
+					this.focusToReturn?.focus();
 				}
+
+				this.lastContainer = null;
 			}
 		}, shadowRootElement, !!shadowRootElement);
 	}

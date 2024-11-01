@@ -35,6 +35,7 @@ export class Server extends IPCServer {
 
 		return Event.map(onHello, webContents => {
 			const id = webContents.id;
+			console.log('[IPC] Server: onDidClientConnect', id);
 			const client = Server.Clients.get(id);
 
 			if (client) {

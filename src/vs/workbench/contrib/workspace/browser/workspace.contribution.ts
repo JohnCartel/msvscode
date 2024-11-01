@@ -428,17 +428,17 @@ export class WorkspaceTrustUXHandler extends Disposable implements IWorkbenchCon
 	//#region Banner
 
 	private getBannerItem(restrictedMode: boolean): IBannerItem | undefined {
-		const dismissedRestricted = this.storageService.getBoolean(BANNER_RESTRICTED_MODE_DISMISSED_KEY, StorageScope.WORKSPACE, false);
+		// const dismissedRestricted = this.storageService.getBoolean(BANNER_RESTRICTED_MODE_DISMISSED_KEY, StorageScope.WORKSPACE, false);
 
-		// never show the banner
-		if (this.bannerSetting === 'never') {
-			return undefined;
-		}
+		// // never show the banner
+		// if (this.bannerSetting === 'never') {
+		// 	return undefined;
+		// }
 
-		// info has been dismissed
-		if (this.bannerSetting === 'untilDismissed' && dismissedRestricted) {
-			return undefined;
-		}
+		// // info has been dismissed
+		// if (this.bannerSetting === 'untilDismissed' && dismissedRestricted) {
+		// 	return undefined;
+		// }
 
 		const actions =
 			[
@@ -489,7 +489,7 @@ export class WorkspaceTrustUXHandler extends Disposable implements IWorkbenchCon
 	}
 
 
-	private get bannerSetting(): 'always' | 'untilDismissed' | 'never' {
+	public get bannerSetting(): 'always' | 'untilDismissed' | 'never' {
 		return this.configurationService.getValue(WORKSPACE_TRUST_BANNER);
 	}
 

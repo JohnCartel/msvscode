@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, append, createStyleSheet, EventHelper, EventLike, getElementsByTagName } from 'vs/base/browser/dom';
+import { $, append, createStyleSheet, EventHelper, EventLike, getElementsByTagName, getWindow } from 'vs/base/browser/dom';
 import { DomEmitter } from 'vs/base/browser/event';
 import { EventType, Gesture, GestureEvent } from 'vs/base/browser/touch';
 import { Delayer } from 'vs/base/common/async';
@@ -167,13 +167,22 @@ class MouseEventFactory implements IPointerEventFactory {
 
 	private disposables = new DisposableStore();
 
+	constructor(private el?: HTMLElement) {
+	}
+
 	@memoize
 	get onPointerMove(): Event<PointerEvent> {
+		if (this.el) {
+			return this.disposables.add(new DomEmitter(getWindow(this.el), 'mousemove')).event;
+		}
 		return this.disposables.add(new DomEmitter(window, 'mousemove')).event;
 	}
 
 	@memoize
 	get onPointerUp(): Event<PointerEvent> {
+		if (this.el) {
+			return this.disposables.add(new DomEmitter(getWindow(this.el), 'mouseup')).event;
+		}
 		return this.disposables.add(new DomEmitter(window, 'mouseup')).event;
 	}
 
@@ -409,7 +418,7 @@ export class Sash extends Disposable {
 		}
 
 		const onMouseDown = this._register(new DomEmitter(this.el, 'mousedown')).event;
-		this._register(onMouseDown(e => this.onPointerStart(e, new MouseEventFactory()), this));
+		this._register(onMouseDown(e => this.onPointerStart(e, new MouseEventFactory(container.ownerDocument.documentElement)), this)); // rengy
 		const onMouseDoubleClick = this._register(new DomEmitter(this.el, 'dblclick')).event;
 		this._register(onMouseDoubleClick(this.onPointerDoublePress, this));
 		const onMouseEnter = this._register(new DomEmitter(this.el, 'mouseenter')).event;
@@ -493,7 +502,7 @@ export class Sash extends Disposable {
 			return;
 		}
 
-		const iframes = getElementsByTagName('iframe');
+		const iframes = getElementsByTagName('iframe', this.el?.ownerDocument);
 		for (const iframe of iframes) {
 			iframe.classList.add(PointerEventsDisabledCssClass); // disable mouse events on iframes as long as we drag the sash
 		}

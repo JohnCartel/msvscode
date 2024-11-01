@@ -8,36 +8,35 @@ import { Part } from 'vs/workbench/browser/part';
 import { Dimension, isAncestor, $, EventHelper, addDisposableGenericMouseDownListener } from 'vs/base/browser/dom';
 import { Event, Emitter, Relay } from 'vs/base/common/event';
 import { contrastBorder, editorBackground } from 'vs/platform/theme/common/colorRegistry';
-import { GroupDirection, IAddGroupOptions, GroupsArrangement, GroupOrientation, IMergeGroupOptions, MergeGroupMode, GroupsOrder, GroupLocation, IFindGroupScope, EditorGroupLayout, GroupLayoutArgument, IEditorGroupsService, IEditorSideGroup } from 'vs/workbench/services/editor/common/editorGroupsService';
+import { GroupDirection, GroupsArrangement, GroupOrientation, IMergeGroupOptions, MergeGroupMode, GroupsOrder, GroupLocation, IFindGroupScope, EditorGroupLayout, GroupLayoutArgument, IEditorSideGroup, IAddGroupOptions, IEditorDropTargetDelegate, IAuxiliaryEditorPart, IEditorPart } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { IView, orthogonal, LayoutPriority, IViewSize, Direction, SerializableGrid, Sizing, ISerializedGrid, Orientation, GridBranchNode, isGridBranchNode, GridNode, createSerializedGrid, Grid } from 'vs/base/browser/ui/grid/grid';
 import { GroupIdentifier, EditorInputWithOptions, IEditorPartOptions, IEditorPartOptionsChangeEvent, GroupModelChangeKind } from 'vs/workbench/common/editor';
 import { EDITOR_GROUP_BORDER, EDITOR_PANE_BACKGROUND } from 'vs/workbench/common/theme';
 import { distinct, coalesce, firstOrDefault } from 'vs/base/common/arrays';
-import { IEditorGroupsAccessor, IEditorGroupView, getEditorPartOptions, impactsEditorPartOptions, IEditorPartCreationOptions } from 'vs/workbench/browser/parts/editor/editor';
+import { IEditorGroupView, getEditorPartOptions, impactsEditorPartOptions, IEditorPartCreationOptions, IEditorPartsView } from 'vs/workbench/browser/parts/editor/editor';
 import { EditorGroupView } from 'vs/workbench/browser/parts/editor/editorGroupView';
 import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/configuration/common/configuration';
 import { IDisposable, dispose, toDisposable, DisposableStore } from 'vs/base/common/lifecycle';
 import { IStorageService, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { ISerializedEditorGroupModel, isSerializedEditorGroupModel } from 'vs/workbench/common/editor/editorGroupModel';
-import { EditorDropTarget, IEditorDropTargetDelegate } from 'vs/workbench/browser/parts/editor/editorDropTarget';
-import { IEditorDropService } from 'vs/workbench/services/editor/browser/editorDropService';
+import { EditorDropTarget } from 'vs/workbench/browser/parts/editor/editorDropTarget';
 import { Color } from 'vs/base/common/color';
 import { CenteredViewLayout } from 'vs/base/browser/ui/centered/centeredViewLayout';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { Parts, IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
-import { registerSingleton } from 'vs/platform/instantiation/common/extensions';
-import { assertIsDefined } from 'vs/base/common/types';
-import { IBoundarySashes } from 'vs/base/browser/ui/grid/gridview';
+import { assertIsDefined, assertType } from 'vs/base/common/types';
+import { IBoundarySashes, ISerializedNode } from 'vs/base/browser/ui/grid/gridview';
 import { CompositeDragAndDropObserver } from 'vs/workbench/browser/dnd';
 import { DeferredPromise, Promises } from 'vs/base/common/async';
 import { findGroup } from 'vs/workbench/services/editor/common/editorGroupFinder';
 import { SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
+import { localize } from 'vs/nls';
 
 interface IEditorPartUIState {
-	serializedGrid: ISerializedGrid;
-	activeGroup: GroupIdentifier;
-	mostRecentActiveGroups: GroupIdentifier[];
+	readonly serializedGrid: ISerializedGrid;
+	readonly activeGroup: GroupIdentifier;
+	readonly mostRecentActiveGroups: GroupIdentifier[];
 }
 
 class GridWidgetView<T extends IView> implements IView {
@@ -80,7 +79,7 @@ class GridWidgetView<T extends IView> implements IView {
 	}
 }
 
-export class EditorPart extends Part implements IEditorGroupsService, IEditorGroupsAccessor, IEditorDropService {
+export class EditorPart extends Part implements IEditorPart {
 
 	declare readonly _serviceBrand: undefined;
 
@@ -88,6 +87,9 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 	private static readonly EDITOR_PART_CENTERED_VIEW_STORAGE_KEY = 'editorpart.centeredview';
 
 	//#region Events
+
+	private readonly _onDidFocus = this._register(new Emitter<void>());
+	readonly onDidFocus = this._onDidFocus.event;
 
 	private readonly _onDidLayout = this._register(new Emitter<Dimension>());
 	readonly onDidLayout = this._onDidLayout.event;
@@ -134,19 +136,22 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 
 	private container: HTMLElement | undefined;
 
-	private centeredLayoutWidget!: CenteredViewLayout;
+	protected centeredLayoutWidget!: CenteredViewLayout;
 
 	private gridWidget!: SerializableGrid<IEditorGroupView>;
 	private readonly gridWidgetView = this._register(new GridWidgetView<IEditorGroupView>());
 
 	constructor(
+		private readonly editorPartsView: IEditorPartsView,
+		id: string,
+		private readonly groupsLabel: string,
 		@IInstantiationService private readonly instantiationService: IInstantiationService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService private readonly configurationService: IConfigurationService,
 		@IStorageService storageService: IStorageService,
 		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
 	) {
-		super(Parts.EDITOR_PART, { hasTitle: false }, themeService, storageService, layoutService);
+		super(id, { hasTitle: false }, themeService, storageService, layoutService);
 
 		this.registerListeners();
 	}
@@ -192,7 +197,7 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		});
 	}
 
-	private _contentDimension!: Dimension;
+	protected _contentDimension!: Dimension;
 	get contentDimension(): Dimension { return this._contentDimension; }
 
 	private _activeGroup!: IEditorGroupView;
@@ -231,6 +236,10 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 
 	get hasRestorableState(): boolean {
 		return !!this.workspaceMemento[EditorPart.EDITOR_PART_UI_STATE_STORAGE_KEY];
+	}
+
+	hasGroup(identifier: GroupIdentifier): boolean {
+		return this.groupViews.has(identifier);
 	}
 
 	getGroups(order = GroupsOrder.CREATION_TIME): IEditorGroupView[] {
@@ -458,6 +467,32 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		}
 	}
 
+	private serializedNodeToGroupLayoutArgument(serializedNode: ISerializedNode): GroupLayoutArgument {
+		if (serializedNode.type === 'branch') {
+			return {
+				size: serializedNode.size,
+				groups: serializedNode.data.map(node => this.serializedNodeToGroupLayoutArgument(node))
+			};
+		}
+
+		return { size: serializedNode.size };
+	}
+
+	getLayout(): EditorGroupLayout {
+
+		// Example return value:
+		// { orientation: 0, groups: [ { groups: [ { size: 0.4 }, { size: 0.6 } ], size: 0.5 }, { groups: [ {}, {} ], size: 0.5 } ] }
+
+		const serializedGrid = this.gridWidget.serialize();
+		const orientation = serializedGrid.orientation === Orientation.HORIZONTAL ? GroupOrientation.HORIZONTAL : GroupOrientation.VERTICAL;
+		const root = this.serializedNodeToGroupLayoutArgument(serializedGrid.root);
+
+		return {
+			orientation,
+			groups: root.groups as GroupLayoutArgument[]
+		};
+	}
+
 	private shouldRestoreFocus(target: Element | undefined): boolean {
 		if (!target) {
 			return false;
@@ -528,11 +563,11 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		// Create group view
 		let groupView: IEditorGroupView;
 		if (from instanceof EditorGroupView) {
-			groupView = EditorGroupView.createCopy(from, this, this.count, this.instantiationService);
+			groupView = EditorGroupView.createCopy(from, this.editorPartsView, this, this.groupsLabel, this.count, this.instantiationService);
 		} else if (isSerializedEditorGroupModel(from)) {
-			groupView = EditorGroupView.createFromSerialized(from, this, this.count, this.instantiationService);
+			groupView = EditorGroupView.createFromSerialized(from, this.editorPartsView, this, this.groupsLabel, this.count, this.instantiationService);
 		} else {
-			groupView = EditorGroupView.createNew(this, this.count, this.instantiationService);
+			groupView = EditorGroupView.createNew(this.editorPartsView, this, this.groupsLabel, this.count, this.instantiationService);
 		}
 
 		// Keep in map
@@ -542,6 +577,8 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		const groupDisposables = new DisposableStore();
 		groupDisposables.add(groupView.onDidFocus(() => {
 			this.doSetGroupActive(groupView);
+
+			this._onDidFocus.fire();
 		}));
 
 		// Track group changes
@@ -559,6 +596,8 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		// Track active editor change after it occurred
 		groupDisposables.add(groupView.onDidActiveEditorChange(() => {
 			this.updateContainer();
+
+			this._onDidFocus.fire();
 		}));
 
 		// Track dispose
@@ -792,7 +831,7 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 	private assertGroupView(group: IEditorGroupView | GroupIdentifier): IEditorGroupView {
 		let groupView: IEditorGroupView | undefined;
 		if (typeof group === 'number') {
-			groupView = this.getGroup(group);
+			groupView = this.editorPartsView.getGroup(group);
 		} else {
 			groupView = group;
 		}
@@ -809,7 +848,9 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 	//#region IEditorDropService
 
 	createEditorDropTarget(container: HTMLElement, delegate: IEditorDropTargetDelegate): IDisposable {
-		return this.instantiationService.createInstance(EditorDropTarget, this, container, delegate);
+		assertType(container instanceof HTMLElement);
+		return this.instantiationService.createInstance(EditorDropTarget, container, delegate);  // TODO
+		// return this.instantiationService.createInstance(EditorDropTarget, container, delegate);
 	}
 
 	//#endregion
@@ -1018,9 +1059,7 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 				onUnexpectedError(new Error(`Error restoring editor grid widget: ${error} (with state: ${JSON.stringify(uiState)})`));
 
 				// Clear any state we have from the failing restore
-				this.groupViews.forEach(group => group.dispose());
-				this.groupViews.clear();
-				this.mostRecentActiveGroups = [];
+				this.disposeGroups();
 
 				return false; // failure
 			}
@@ -1121,7 +1160,7 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		this.doLayout(Dimension.lift(contentAreaSize), top, left);
 	}
 
-	private doLayout(dimension: Dimension, top: number, left: number): void {
+	protected doLayout(dimension: Dimension, top: number, left: number): void {
 		this._contentDimension = dimension;
 
 		// Layout Grid
@@ -1167,11 +1206,22 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 		};
 	}
 
+
+	private disposeGroups(): void {
+		for (const group of this.groups) {
+			group.dispose();
+
+			this._onDidRemoveGroup.fire(group);
+		}
+
+		this.groupViews.clear();
+		this.mostRecentActiveGroups = [];
+	}
+
 	override dispose(): void {
 
 		// Forward to all groups
-		this.groupViews.forEach(group => group.dispose());
-		this.groupViews.clear();
+		this.disposeGroups();
 
 		// Grid widget
 		this.gridWidget?.dispose();
@@ -1182,16 +1232,66 @@ export class EditorPart extends Part implements IEditorGroupsService, IEditorGro
 	//#endregion
 }
 
-class EditorDropService implements IEditorDropService {
+// class EditorDropService implements IEditorDropService {
 
-	declare readonly _serviceBrand: undefined;
+// 	declare readonly _serviceBrand: undefined;
 
-	constructor(@IEditorGroupsService private readonly editorPart: EditorPart) { }
+// 	constructor(@IEditorGroupsService private readonly editorPart: EditorPart) { }
 
-	createEditorDropTarget(container: HTMLElement, delegate: IEditorDropTargetDelegate): IDisposable {
-		return this.editorPart.createEditorDropTarget(container, delegate);
+// 	createEditorDropTarget(container: HTMLElement, delegate: IEditorDropTargetDelegate): IDisposable {
+// 		return this.editorPart.createEditorDropTarget(container, delegate);
+// 	}
+// }
+
+// registerSingleton(IEditorGroupsService, EditorPart);
+// registerSingleton(IEditorDropService, EditorDropService);
+
+export class MainEditorPart extends EditorPart {
+
+	constructor(
+		editorPartsView: IEditorPartsView,
+		@IInstantiationService instantiationService: IInstantiationService,
+		@IThemeService themeService: IThemeService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IStorageService storageService: IStorageService,
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
+	) {
+		super(editorPartsView, Parts.EDITOR_PART, '', instantiationService, themeService, configurationService, storageService, layoutService);
 	}
 }
 
-registerSingleton(IEditorGroupsService, EditorPart);
-registerSingleton(IEditorDropService, EditorDropService);
+export class AuxiliaryEditorPart extends EditorPart implements IAuxiliaryEditorPart {
+
+	private static COUNTER = 0;
+
+	private readonly _onDidClose = this._register(new Emitter<void>());
+	readonly onDidClose = this._onDidClose.event;
+
+	constructor(
+		editorPartsView: IEditorPartsView,
+		@IInstantiationService instantiationService: IInstantiationService,
+		@IThemeService themeService: IThemeService,
+		@IConfigurationService configurationService: IConfigurationService,
+		@IStorageService storageService: IStorageService,
+		@IWorkbenchLayoutService layoutService: IWorkbenchLayoutService
+	) {
+		const id = AuxiliaryEditorPart.COUNTER++;
+		super(editorPartsView, `workbench.parts.auxiliaryEditor.${id}`, localize('auxiliaryEditorPartLabel', "Window {0}", id + 1), instantiationService, themeService, configurationService, storageService, layoutService);
+	}
+
+	protected override doLayout(dimension: Dimension, top: number, left: number): void {
+		this._contentDimension = dimension;
+
+		// Layout Grid
+		this.centeredLayoutWidget.layout(this._contentDimension.width, this._contentDimension.height, top, left);
+	}
+
+	protected override saveState(): void {
+		return; // TODO@bpasero support auxiliary editor state
+	}
+
+	async close(): Promise<void> {
+		// TODO@bpasero this needs full support for closing all editors, handling vetos and showing dialogs
+		this._onDidClose.fire();
+	}
+}

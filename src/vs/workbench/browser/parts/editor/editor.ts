@@ -5,7 +5,7 @@
 
 import { GroupIdentifier, IWorkbenchEditorConfiguration, IEditorIdentifier, IEditorCloseEvent, IEditorPartOptions, IEditorPartOptionsChangeEvent, SideBySideEditor, EditorCloseContext } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
-import { IEditorGroup, GroupDirection, IAddGroupOptions, IMergeGroupOptions, GroupsOrder, GroupsArrangement } from 'vs/workbench/services/editor/common/editorGroupsService';
+import { IEditorGroup, GroupDirection, IMergeGroupOptions, GroupsOrder, GroupsArrangement } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IDisposable } from 'vs/base/common/lifecycle';
 import { Dimension } from 'vs/base/browser/dom';
 import { Event } from 'vs/base/common/event';
@@ -75,7 +75,25 @@ export function getEditorPartOptions(configurationService: IConfigurationService
 	return options;
 }
 
-export interface IEditorGroupsAccessor {
+/**
+ * A helper to access editor groups across all opened editor parts.
+ */
+export interface IEditorPartsView {
+
+	/**
+	 * An array of all editor groups across all editor parts.
+	 */
+	readonly groups: IEditorGroupView[];
+
+	/**
+	 * Get the group based on an identifier across all opened
+	 * editor parts.
+	 */
+	getGroup(identifier: GroupIdentifier): IEditorGroupView | undefined;
+}
+
+
+export interface IEditorGroupsView {
 
 	readonly groups: IEditorGroupView[];
 	readonly activeGroup: IEditorGroupView;
@@ -91,7 +109,7 @@ export interface IEditorGroupsAccessor {
 	activateGroup(identifier: IEditorGroupView | GroupIdentifier): IEditorGroupView;
 	restoreGroup(identifier: IEditorGroupView | GroupIdentifier): IEditorGroupView;
 
-	addGroup(location: IEditorGroupView | GroupIdentifier, direction: GroupDirection, options?: IAddGroupOptions): IEditorGroupView;
+	addGroup(location: IEditorGroupView | GroupIdentifier, direction: GroupDirection): IEditorGroupView;
 	mergeGroup(group: IEditorGroupView | GroupIdentifier, target: IEditorGroupView | GroupIdentifier, options?: IMergeGroupOptions): IEditorGroupView;
 
 	moveGroup(group: IEditorGroupView | GroupIdentifier, location: IEditorGroupView | GroupIdentifier, direction: GroupDirection): IEditorGroupView;
@@ -118,6 +136,26 @@ export interface IEditorGroupTitleHeight {
 	offset: number;
 }
 
+/**
+ * A helper to access editor groups across all opened editor parts.
+ */
+export interface IEditorPartsView {
+
+	/**
+	 * An array of all editor groups across all editor parts.
+	 */
+	readonly groups: IEditorGroupView[];
+
+	/**
+	 * Get the group based on an identifier across all opened
+	 * editor parts.
+	 */
+	getGroup(identifier: GroupIdentifier): IEditorGroupView | undefined;
+}
+
+/**
+ * A helper to access and mutate editor groups within an editor part.
+ */
 export interface IEditorGroupView extends IDisposable, ISerializableView, IEditorGroup {
 
 	readonly onDidFocus: Event<void>;

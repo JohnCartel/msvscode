@@ -391,7 +391,7 @@ export class CommentNode<T extends IRange | ICellRange> extends Disposable {
 		this._commentEditor.layout({ width: container.clientWidth - 14, height: 90 });
 		this._commentEditor.focus();
 
-		dom.scheduleAtNextAnimationFrame(() => {
+		dom.scheduleAtNextAnimationFrame(dom.getWindow(container), () => {
 			this._commentEditor!.layout({ width: container.clientWidth - 14, height: 90 });
 			this._commentEditor!.focus();
 		});

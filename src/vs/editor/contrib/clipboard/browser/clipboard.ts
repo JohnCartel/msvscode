@@ -4,6 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import * as browser from 'vs/base/browser/browser';
+import { getActiveDocument } from 'vs/base/browser/dom';
 import { KeyCode, KeyMod } from 'vs/base/common/keyCodes';
 import * as platform from 'vs/base/common/platform';
 import { CopyOptions, InMemoryClipboardMetadataManager } from 'vs/editor/browser/controller/textAreaInput';
@@ -176,7 +177,7 @@ class ExecCommandCopyWithSyntaxHighlightingAction extends EditorAction {
 
 		CopyOptions.forceCopyWithSyntaxHighlighting = true;
 		editor.focus();
-		document.execCommand('copy');
+		getActiveDocument().execCommand('copy');
 		CopyOptions.forceCopyWithSyntaxHighlighting = false;
 	}
 }
@@ -197,7 +198,8 @@ function registerExecCommandImpl(target: MultiCommand | undefined, browserComman
 			if (selection && selection.isEmpty() && !emptySelectionClipboard) {
 				return true;
 			}
-			document.execCommand(browserCommand);
+			// 使用focusedEditor的document的execCommand()方法来执行cut/copy等命令
+			focusedEditor.getContainerDomNode().ownerDocument.execCommand(browserCommand);
 			return true;
 		}
 		return false;
@@ -205,7 +207,7 @@ function registerExecCommandImpl(target: MultiCommand | undefined, browserComman
 
 	// 2. (default) handle case when focus is somewhere else.
 	target.addImplementation(0, 'generic-dom', (accessor: ServicesAccessor, args: any) => {
-		document.execCommand(browserCommand);
+		getActiveDocument().execCommand(browserCommand);
 		return true;
 	});
 }
@@ -222,7 +224,7 @@ if (PasteAction) {
 		// Only if editor text focus (i.e. not if editor has widget focus).
 		const focusedEditor = codeEditorService.getFocusedCodeEditor();
 		if (focusedEditor && focusedEditor.hasTextFocus()) {
-			const result = document.execCommand('paste');
+			const result = getActiveDocument().execCommand('paste');
 			// Use the clipboard service if document.execCommand('paste') was not successful
 			if (!result && platform.isWeb) {
 				return (async () => {
@@ -253,7 +255,7 @@ if (PasteAction) {
 
 	// 2. Paste: (default) handle case when focus is somewhere else.
 	PasteAction.addImplementation(0, 'generic-dom', (accessor: ServicesAccessor, args: any) => {
-		document.execCommand('paste');
+		getActiveDocument().execCommand('paste');
 		return true;
 	});
 }

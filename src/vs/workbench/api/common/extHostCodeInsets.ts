@@ -82,6 +82,7 @@ export class ExtHostEditorInsets implements ExtHostEditorInsetsShape {
 
 			set html(value: string) {
 				this._html = value;
+				// CodeInsets
 				that._proxy.$setHtml(handle, value);
 			}
 

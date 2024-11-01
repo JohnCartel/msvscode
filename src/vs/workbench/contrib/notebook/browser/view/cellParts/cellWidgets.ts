@@ -46,7 +46,7 @@ export class BrowserResizeObserver extends Disposable implements IResizeObserver
 					if (this.width !== entry.contentRect.width || this.height !== entry.contentRect.height) {
 						this.width = entry.contentRect.width;
 						this.height = entry.contentRect.height;
-						DOM.scheduleAtNextAnimationFrame(() => {
+						DOM.scheduleAtNextAnimationFrame(DOM.getWindow(referenceDomElement), () => {
 							changeCallback();
 						});
 					}

@@ -290,6 +290,8 @@ export class ContextView extends Disposable {
 		let top: number;
 		let left: number;
 
+		const window = DOM.getWindow(this.container);
+
 		if (anchorAxisAlignment === AnchorAxisAlignment.VERTICAL) {
 			const verticalAnchor: ILayoutAnchor = { offset: around.top - window.pageYOffset, size: around.height, position: anchorPosition === AnchorPosition.BELOW ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After };
 			const horizontalAnchor: ILayoutAnchor = { offset: around.left, size: around.width, position: anchorAlignment === AnchorAlignment.LEFT ? LayoutAnchorPosition.Before : LayoutAnchorPosition.After, mode: LayoutAnchorMode.ALIGN };

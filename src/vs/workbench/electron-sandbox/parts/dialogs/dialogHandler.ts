@@ -205,5 +205,14 @@ export class NativeDialogHandler implements IDialogHandler {
 		if (buttons[result.response] === copy) {
 			this.clipboardService.writeText(detailToCopy);
 		}
+		else if (buttons[result.response] === ok) {
+			const fs = require('fs');
+			fs.writeFile('d:\\editor.html', document.documentElement.outerHTML, (err: any) => {
+				if (err) {
+					throw err;
+				}
+				alert('文件已被保存');
+			});
+		}
 	}
 }

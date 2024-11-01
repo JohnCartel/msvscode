@@ -40,6 +40,7 @@ import { InstantiationService } from 'vs/platform/instantiation/common/instantia
 import { Layout } from 'vs/workbench/browser/layout';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
+import { addDisposableListener } from 'vs/base/browser/dom';
 
 export interface IWorkbenchOptions {
 
@@ -74,14 +75,15 @@ export class Workbench extends Layout {
 	private registerErrorHandler(logService: ILogService): void {
 
 		// Listen on unhandled rejection events
-		window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+		// window.addEventListener('unhandledrejection', (event: PromiseRejectionEvent) => {
+		this._register(addDisposableListener(window, 'unhandledrejection', event => {
 
 			// See https://developer.mozilla.org/en-US/docs/Web/API/PromiseRejectionEvent
 			onUnexpectedError(event.reason);
 
 			// Prevent the printing of this event to the console
 			event.preventDefault();
-		});
+		}));
 
 		// Install handler for unexpected errors
 		setUnexpectedErrorHandler(error => this.handleUnexpectedError(error, logService));

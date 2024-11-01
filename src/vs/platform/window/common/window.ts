@@ -12,7 +12,6 @@ import { ISandboxConfiguration } from 'vs/base/parts/sandbox/common/sandboxTypes
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IEditorOptions } from 'vs/platform/editor/common/editor';
 import { NativeParsedArgs } from 'vs/platform/environment/common/argv';
-import { IEnvironmentService } from 'vs/platform/environment/common/environment';
 import { FileType } from 'vs/platform/files/common/files';
 import { LogLevel } from 'vs/platform/log/common/log';
 import { PolicyDefinition, PolicyValue } from 'vs/platform/policy/common/policy';
@@ -25,6 +24,17 @@ export const WindowMinimumSize = {
 	WIDTH_WITH_VERTICAL_PANEL: 600,
 	HEIGHT: 270
 };
+
+
+export interface IPoint {
+	readonly x: number;
+	readonly y: number;
+}
+
+export interface IRectangle extends IPoint {
+	readonly width: number;
+	readonly height: number;
+}
 
 export interface IBaseOpenWindowsOptions {
 
@@ -175,17 +185,18 @@ export function getTitleBarStyle(configurationService: IConfigurationService): '
 	return isLinux ? 'native' : 'custom'; // default to custom on all macOS and Windows
 }
 
-export function useWindowControlsOverlay(configurationService: IConfigurationService, environmentService: IEnvironmentService): boolean {
-	// Window Controls Overlay are only configurable on Windows
-	if (!isWindows || isWeb || !environmentService.isBuilt) {
-		return false;
+export function useWindowControlsOverlay(configurationService: IConfigurationService): boolean {
+	if (!isWindows || isWeb) {
+		return false; // only supported on a desktop Windows instance
 	}
 
 	if (getTitleBarStyle(configurationService) === 'native') {
 		return false;
 	}
 
-	return configurationService.getValue<boolean>('window.experimental.windowControlsOverlay.enabled');
+	// return configurationService.getValue<boolean>('window.experimental.windowControlsOverlay.enabled');
+	// Default to true.
+	return true;
 }
 
 export interface IPath<T = IEditorOptions> extends IPathData<T> {

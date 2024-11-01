@@ -5,7 +5,7 @@
 
 import 'vs/css!./media/activityaction';
 import { localize } from 'vs/nls';
-import { EventType, addDisposableListener, EventHelper } from 'vs/base/browser/dom';
+import { EventType, addDisposableListener, EventHelper, isMouseEvent } from 'vs/base/browser/dom';
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { EventType as TouchEventType, GestureEvent } from 'vs/base/browser/touch';
 import { Action, IAction, Separator, SubmenuAction, toAction } from 'vs/base/common/actions';
@@ -61,7 +61,7 @@ export class ViewContainerActivityAction extends ActivityAction {
 	}
 
 	override async run(event: { preserveFocus: boolean }): Promise<void> {
-		if (event instanceof MouseEvent && event.button === 2) {
+		if (isMouseEvent(event) && event.button === 2) {
 			return; // do not run on right click
 		}
 
@@ -111,7 +111,7 @@ export class ViewContainerActivityAction extends ActivityAction {
 	}
 }
 
-class MenuActivityActionViewItem extends ActivityActionViewItem {
+export class MenuActivityActionViewItem extends ActivityActionViewItem {
 
 	constructor(
 		private readonly menuId: MenuId,
@@ -156,7 +156,7 @@ class MenuActivityActionViewItem extends ActivityActionViewItem {
 		}));
 	}
 
-	private async showContextMenu(e?: MouseEvent): Promise<void> {
+	async showContextMenu(e?: MouseEvent): Promise<void> {
 		const disposables = new DisposableStore();
 
 		let actions: IAction[];

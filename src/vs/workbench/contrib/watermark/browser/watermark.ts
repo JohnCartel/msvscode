@@ -144,7 +144,7 @@ export class WatermarkContribution extends Disposable implements IWorkbenchContr
 	}
 
 	private create(): void {
-		const container = assertIsDefined(this.layoutService.getContainer(Parts.EDITOR_PART));
+		const container = assertIsDefined(this.layoutService.getContainer(window, Parts.EDITOR_PART));
 		container.classList.add('has-watermark');
 
 		this.watermark = $('.watermark');
@@ -196,8 +196,10 @@ export class WatermarkContribution extends Disposable implements IWorkbenchContr
 		if (this.watermark) {
 			this.watermark.remove();
 
-			const container = this.layoutService.getContainer(Parts.EDITOR_PART);
-			container?.classList.remove('has-watermark');
+			const container = this.layoutService.getContainer(window, Parts.EDITOR_PART);
+			if (container) {
+				container.classList.remove('has-watermark');
+			}
 
 			this.watermarkDisposable.clear();
 		}

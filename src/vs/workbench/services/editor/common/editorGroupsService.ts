@@ -14,6 +14,7 @@ import { IDisposable } from 'vs/base/common/lifecycle';
 import { IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { URI } from 'vs/base/common/uri';
 import { IGroupModelChangeEvent } from 'vs/workbench/common/editor/editorGroupModel';
+import { IRectangle } from 'vs/platform/window/common/window';
 
 export const IEditorGroupsService = createDecorator<IEditorGroupsService>('editorGroupsService');
 
@@ -147,9 +148,19 @@ export interface IEditorSideGroup {
 	openEditor(editor: EditorInput, options?: IEditorOptions): Promise<IEditorPane | undefined>;
 }
 
-export interface IEditorGroupsService {
+export interface IEditorDropTargetDelegate {
 
-	readonly _serviceBrand: undefined;
+	/**
+	 * A helper to figure out if the drop target contains the provided group.
+	 */
+	containsGroup?(groupView: IEditorGroup): boolean;
+}
+
+/**
+ * An editor part is a viewer of editor groups. There can be multiple editor
+ * parts opened in multiple windows.
+ */
+export interface IEditorPart {
 
 	/**
 	 * An event for when the active editor group changes. The active editor
@@ -302,6 +313,11 @@ export interface IEditorGroupsService {
 	applyLayout(layout: EditorGroupLayout): void;
 
 	/**
+	 * Returns an editor layout describing the current grid
+	 */
+	getLayout(): EditorGroupLayout;
+
+	/**
 	 * Enable or disable centered editor layout.
 	 */
 	centerLayout(active: boolean): void;
@@ -399,6 +415,43 @@ export interface IEditorGroupsService {
 	 * Enforce editor part options temporarily.
 	 */
 	enforcePartOptions(options: IEditorPartOptions): IDisposable;
+
+	/**
+	 * Allows to register a drag and drop target for editors
+	 * on the provided `container`.
+	 */
+	createEditorDropTarget(container: unknown /* HTMLElement */, delegate: IEditorDropTargetDelegate): IDisposable;
+}
+
+export interface IAuxiliaryEditorPart extends IEditorPart {
+
+	/**
+	 * Close this auxiliary editor part and free up associated resources.
+	 */
+	close(): Promise<void>;
+}
+
+export interface IAuxiliaryWindowOpenOptions {
+	readonly bounds?: Partial<IRectangle>;
+}
+
+/**
+ * The main service to interact with editor groups across all opened editor parts.
+ */
+export interface IEditorGroupsService extends IEditorPart {
+
+	readonly _serviceBrand: undefined;
+
+	/**
+	 * Provides access to the currently active editor part.
+	 */
+	readonly activePart: IEditorPart;
+
+	/**
+	 * Opens a new window with a full editor part instantiated
+	 * in there.
+	 */
+	createAuxiliaryEditorPart(options?: IAuxiliaryWindowOpenOptions): IAuxiliaryEditorPart;
 }
 
 export const enum OpenEditorContext {

@@ -6,7 +6,7 @@
 import 'vs/css!./media/titlecontrol';
 import { localize } from 'vs/nls';
 import { applyDragImage, DataTransfers } from 'vs/base/browser/dnd';
-import { addDisposableListener, Dimension, EventType } from 'vs/base/browser/dom';
+import { addDisposableListener, Dimension, EventType, isMouseEvent } from 'vs/base/browser/dom';
 import { StandardMouseEvent } from 'vs/base/browser/mouseEvent';
 import { ActionsOrientation, IActionViewItem, prepareActions } from 'vs/base/browser/ui/actionbar/actionbar';
 import { ToolBar } from 'vs/base/browser/ui/toolbar/toolbar';
@@ -29,7 +29,7 @@ import { DraggedEditorGroupIdentifier, DraggedEditorIdentifier, DraggedTreeItems
 import { EditorPane } from 'vs/workbench/browser/parts/editor/editorPane';
 import { BreadcrumbsConfig } from 'vs/workbench/browser/parts/editor/breadcrumbs';
 import { BreadcrumbsControl, IBreadcrumbsControlOptions } from 'vs/workbench/browser/parts/editor/breadcrumbsControl';
-import { IEditorGroupsAccessor, IEditorGroupTitleHeight, IEditorGroupView } from 'vs/workbench/browser/parts/editor/editor';
+import { IEditorGroupTitleHeight, IEditorGroupView } from 'vs/workbench/browser/parts/editor/editor';
 import { IEditorCommandsContext, EditorResourceAccessor, IEditorPartOptions, SideBySideEditor, EditorsOrder, EditorInputCapabilities } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { ResourceContextKey, ActiveEditorPinnedContext, ActiveEditorStickyContext, ActiveEditorGroupLockedContext, ActiveEditorCanSplitInGroupContext, SideBySideEditorActiveContext, ActiveEditorLastInGroupContext, ActiveEditorFirstInGroupContext } from 'vs/workbench/common/contextkeys';
@@ -39,6 +39,7 @@ import { withNullAsUndefined, withUndefinedAsNull, assertIsDefined } from 'vs/ba
 import { isFirefox } from 'vs/base/browser/browser';
 import { isCancellationError } from 'vs/base/common/errors';
 import { SideBySideEditorInput } from 'vs/workbench/common/editor/sideBySideEditorInput';
+import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
 
 export interface IToolbarActions {
 	primary: IAction[];
@@ -114,7 +115,6 @@ export abstract class TitleControl extends Themable {
 
 	constructor(
 		parent: HTMLElement,
-		protected accessor: IEditorGroupsAccessor,
 		protected group: IEditorGroupView,
 		@IContextMenuService private readonly contextMenuService: IContextMenuService,
 		@IInstantiationService protected instantiationService: IInstantiationService,
@@ -126,7 +126,8 @@ export abstract class TitleControl extends Themable {
 		@IQuickInputService protected quickInputService: IQuickInputService,
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService protected configurationService: IConfigurationService,
-		@IFileService private readonly fileService: IFileService
+		@IFileService private readonly fileService: IFileService,
+		@IEditorGroupsService protected readonly editorGroupService: IEditorGroupsService
 	) {
 		super(themeService);
 
@@ -302,7 +303,7 @@ export abstract class TitleControl extends Themable {
 
 			// Drag all tabs of the group if tabs are enabled
 			let hasDataTransfer = false;
-			if (this.accessor.partOptions.showTabs) {
+			if (this.editorGroupService.partOptions.showTabs) {
 				hasDataTransfer = this.doFillResourceDataTransfers(this.group.getEditors(EditorsOrder.SEQUENTIAL), e);
 			}
 
@@ -321,7 +322,7 @@ export abstract class TitleControl extends Themable {
 			// Drag Image
 			if (this.group.activeEditor) {
 				let label = this.group.activeEditor.getName();
-				if (this.accessor.partOptions.showTabs && this.group.count > 1) {
+				if (this.editorGroupService.partOptions.showTabs && this.group.count > 1) {
 					label = localize('draggedEditorGroup', "{0} (+{1})", label, this.group.count - 1);
 				}
 
@@ -367,7 +368,7 @@ export abstract class TitleControl extends Themable {
 
 		// Find target anchor
 		let anchor: HTMLElement | { x: number; y: number } = node;
-		if (e instanceof MouseEvent) {
+		if (isMouseEvent(e)) {
 			const event = new StandardMouseEvent(e);
 			anchor = { x: event.posx, y: event.posy };
 		}
@@ -395,7 +396,7 @@ export abstract class TitleControl extends Themable {
 				this.sideBySideEditorContext.set(currentSideBySideEditorContext);
 
 				// restore focus to active group
-				this.accessor.activeGroup.focus();
+				this.editorGroupService.activeGroup.focus();
 
 				// Cleanup
 				dispose(actionsDisposable);

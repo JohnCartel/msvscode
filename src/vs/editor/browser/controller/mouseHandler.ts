@@ -418,7 +418,7 @@ class MouseDownOperation extends Disposable {
 				(browserEvent?: MouseEvent | KeyboardEvent) => {
 					const position = this._findMousePosition(this._lastMouseEvent!, false);
 
-					if (browserEvent && browserEvent instanceof KeyboardEvent) {
+					if (browserEvent && dom.isKeyboardEvent(browserEvent)) {
 						// cancel
 						this._viewController.emitMouseDropCanceled();
 					} else {

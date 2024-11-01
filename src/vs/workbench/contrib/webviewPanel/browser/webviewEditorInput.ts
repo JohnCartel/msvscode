@@ -30,7 +30,7 @@ export class WebviewInput extends EditorInput {
 	}
 
 	public override get capabilities(): EditorInputCapabilities {
-		return EditorInputCapabilities.Readonly | EditorInputCapabilities.Singleton | EditorInputCapabilities.CanDropIntoEditor;
+		return EditorInputCapabilities.Readonly | EditorInputCapabilities.Singleton | EditorInputCapabilities.CanDropIntoEditor | EditorInputCapabilities.AuxWindowUnsupported;
 	}
 
 	private _name: string;
@@ -70,6 +70,7 @@ export class WebviewInput extends EditorInput {
 	override dispose() {
 		if (!this.isDisposed()) {
 			if (!this._hasTransfered) {
+				// 释放webviewOverlay
 				this._webview?.dispose();
 			}
 		}

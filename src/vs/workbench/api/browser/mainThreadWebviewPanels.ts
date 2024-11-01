@@ -164,7 +164,7 @@ export class MainThreadWebviewPanels extends Disposable implements extHostProtoc
 		} : {};
 
 		const extension = reviveWebviewExtension(extensionData);
-
+		// 创建响应插件的webview请求
 		const webview = this._webviewWorkbenchService.createWebview({
 			id: handle,
 			providedId: viewType,
@@ -173,6 +173,7 @@ export class MainThreadWebviewPanels extends Disposable implements extHostProtoc
 			extension
 		}, this.webviewPanelViewType.fromExternal(viewType), initData.title, mainThreadShowOptions);
 
+		// 设置webviewInput
 		this.addWebviewInput(handle, webview, { serializeBuffersForPostMessage: initData.serializeBuffersForPostMessage });
 
 		const payload = {

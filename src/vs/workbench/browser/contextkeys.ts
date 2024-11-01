@@ -281,7 +281,7 @@ export class WorkbenchContextKeysHandler extends Disposable {
 
 		this.updateEditorGroupContextKeys();
 
-		if (activeEditorPane) {
+		if (activeEditorPane?.input) {
 			this.activeEditorContext.set(activeEditorPane.getId());
 			this.activeEditorIsReadonly.set(activeEditorPane.input.hasCapability(EditorInputCapabilities.Readonly));
 			this.activeEditorCanRevert.set(!activeEditorPane.input.hasCapability(EditorInputCapabilities.Untitled));

@@ -27,6 +27,10 @@ class StandaloneLayoutService implements ILayoutService {
 		return false;
 	}
 
+	getContainer() {
+		return this.activeContainer;
+	}
+
 	get container(): HTMLElement {
 		// On a page, multiple editors can be created. Therefore, there are multiple containers, not
 		// just a single one. Please use `ICodeEditorService` to get the current focused code editor
@@ -34,6 +38,13 @@ class StandaloneLayoutService implements ILayoutService {
 		// which implements `ILayoutService` but is not a part of the service collection because
 		// it is code editor instance specific.
 		throw new Error(`ILayoutService.container is not available in the standalone editor!`);
+	}
+
+
+	get activeContainer(): HTMLElement {
+		const activeCodeEditor = this._codeEditorService.getFocusedCodeEditor() ?? this._codeEditorService.getActiveCodeEditor();
+
+		return activeCodeEditor?.getContainerDomNode() ?? this.container;
 	}
 
 	focus(): void {

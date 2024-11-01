@@ -32,10 +32,10 @@ import { activeContrastBorder, contrastBorder, editorBackground, breadcrumbsBack
 import { ResourcesDropHandler, DraggedEditorIdentifier, DraggedEditorGroupIdentifier, DraggedTreeItemsIdentifier, extractTreeDropData } from 'vs/workbench/browser/dnd';
 import { Color } from 'vs/base/common/color';
 import { INotificationService } from 'vs/platform/notification/common/notification';
-import { MergeGroupMode, IMergeGroupOptions, GroupsArrangement, IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
-import { addDisposableListener, EventType, EventHelper, Dimension, scheduleAtNextAnimationFrame, findParentWithClass, clearNode, DragAndDropObserver } from 'vs/base/browser/dom';
+import { MergeGroupMode, IMergeGroupOptions, GroupsArrangement, IEditorGroupsService, IAuxiliaryEditorPart } from 'vs/workbench/services/editor/common/editorGroupsService';
+import { addDisposableListener, EventType, EventHelper, Dimension, scheduleAtNextAnimationFrame, findParentWithClass, clearNode, DragAndDropObserver, isMouseEvent, getWindow } from 'vs/base/browser/dom';
 import { localize } from 'vs/nls';
-import { IEditorGroupsAccessor, IEditorGroupView, EditorServiceImpl, IEditorGroupTitleHeight } from 'vs/workbench/browser/parts/editor/editor';
+import { IEditorGroupView, EditorServiceImpl, IEditorGroupTitleHeight } from 'vs/workbench/browser/parts/editor/editor';
 import { CloseOneEditorAction, UnpinEditorAction } from 'vs/workbench/browser/parts/editor/editorActions';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { BreadcrumbsControl } from 'vs/workbench/browser/parts/editor/breadcrumbsControl';
@@ -130,7 +130,6 @@ export class TabsTitleControl extends TitleControl {
 
 	constructor(
 		parent: HTMLElement,
-		accessor: IEditorGroupsAccessor,
 		group: IEditorGroupView,
 		@IContextMenuService contextMenuService: IContextMenuService,
 		@IInstantiationService instantiationService: IInstantiationService,
@@ -143,12 +142,12 @@ export class TabsTitleControl extends TitleControl {
 		@IThemeService themeService: IThemeService,
 		@IConfigurationService configurationService: IConfigurationService,
 		@IFileService fileService: IFileService,
+		@IEditorGroupsService editorGroupService: IEditorGroupsService,
 		@IEditorService private readonly editorService: EditorServiceImpl,
 		@IPathService private readonly pathService: IPathService,
-		@IEditorGroupsService private readonly editorGroupService: IEditorGroupsService,
 		@ITreeViewsService private readonly treeViewsDragAndDropService: ITreeViewsService
 	) {
-		super(parent, accessor, group, contextMenuService, instantiationService, contextKeyService, keybindingService, telemetryService, notificationService, menuService, quickInputService, themeService, configurationService, fileService);
+		super(parent, group, contextMenuService, instantiationService, contextKeyService, keybindingService, telemetryService, notificationService, menuService, quickInputService, themeService, configurationService, fileService, editorGroupService);
 
 		// Resolve the correct path library for the OS we are on
 		// If we are connected to remote, this accounts for the
@@ -219,7 +218,7 @@ export class TabsTitleControl extends TitleControl {
 	}
 
 	private getTabsScrollbarSizing(): number {
-		if (this.accessor.partOptions.titleScrollbarSizing !== 'large') {
+		if (this.editorGroupService.partOptions.titleScrollbarSizing !== 'large') {
 			return TabsTitleControl.SCROLLBAR_SIZES.default;
 		}
 
@@ -356,7 +355,7 @@ export class TabsTitleControl extends TitleControl {
 			}
 
 			// Shift-key enables or disables this behaviour depending on the setting
-			if (this.accessor.partOptions.scrollToSwitchTabs === true) {
+			if (this.editorGroupService.partOptions.scrollToSwitchTabs === true) {
 				if (e.shiftKey) {
 					return; // 'on': only enable this when Shift-key is not pressed
 				}
@@ -573,7 +572,9 @@ export class TabsTitleControl extends TitleControl {
 	}
 
 	updateEditorDirty(editor: EditorInput): void {
-		this.withTab(editor, (editor, index, tabContainer, tabLabelWidget, tabLabel, tabActionBar) => this.redrawTabActiveAndDirty(this.accessor.activeGroup === this.group, editor, tabContainer, tabActionBar));
+		this.withTab(editor,
+			(editor, index, tabContainer, tabLabelWidget, tabLabel, tabActionBar) =>
+				this.redrawTabActiveAndDirty(this.editorGroupService.activeGroup === this.group, editor, tabContainer, tabActionBar));
 	}
 
 	updateOptions(oldOptions: IEditorPartOptions, newOptions: IEditorPartOptions): void {
@@ -691,7 +692,7 @@ export class TabsTitleControl extends TitleControl {
 		const handleClickOrTouch = (e: MouseEvent | GestureEvent, preserveFocus: boolean): void => {
 			tab.blur(); // prevent flicker of focus outline on tab until editor got focus
 
-			if (e instanceof MouseEvent && e.button !== 0) {
+			if (isMouseEvent(e) && e.button !== 0) {
 				if (e.button === 1) {
 					e.preventDefault(); // required to prevent auto-scrolling (https://github.com/microsoft/vscode/issues/16690)
 				}
@@ -817,7 +818,7 @@ export class TabsTitleControl extends TitleControl {
 
 				const editor = this.group.getEditorByIndex(index);
 				if (editor && this.group.isPinned(editor)) {
-					this.accessor.arrangeGroups(GroupsArrangement.TOGGLE, this.group);
+					this.editorGroupService.arrangeGroups(GroupsArrangement.TOGGLE);
 				} else {
 					this.group.pinEditor(editor);
 				}
@@ -834,29 +835,27 @@ export class TabsTitleControl extends TitleControl {
 			}
 		}, true /* use capture to fix https://github.com/microsoft/vscode/issues/19145 */));
 
-		// Drag support
-		disposables.add(addDisposableListener(tab, EventType.DRAG_START, e => {
-			const editor = this.group.getEditorByIndex(index);
-			if (!editor) {
-				return;
-			}
-
-			this.editorTransfer.setData([new DraggedEditorIdentifier({ editor, groupId: this.group.id })], DraggedEditorIdentifier.prototype);
-
-			if (e.dataTransfer) {
-				e.dataTransfer.effectAllowed = 'copyMove';
-			}
-
-			// Apply some datatransfer types to allow for dragging the element outside of the application
-			this.doFillResourceDataTransfers([editor], e);
-
-			// Fixes https://github.com/microsoft/vscode/issues/18733
-			tab.classList.add('dragged');
-			scheduleAtNextAnimationFrame(() => tab.classList.remove('dragged'));
-		}));
-
 		// Drop support
 		disposables.add(new DragAndDropObserver(tab, {
+			onDragStart: e => {
+				const editor = this.group.getEditorByIndex(index);
+				if (!editor) {
+					return;
+				}
+
+				this.editorTransfer.setData([new DraggedEditorIdentifier({ editor, groupId: this.group.id })], DraggedEditorIdentifier.prototype);
+
+				if (e.dataTransfer) {
+					e.dataTransfer.effectAllowed = 'copyMove';
+				}
+
+				// Apply some datatransfer types to allow for dragging the element outside of the application
+				this.doFillResourceDataTransfers([editor], e);
+
+				// Fixes https://github.com/microsoft/vscode/issues/18733
+				tab.classList.add('dragged');
+				scheduleAtNextAnimationFrame(getWindow(e), () => tab.classList.remove('dragged'));
+			},
 			onDragEnter: e => {
 
 				// Update class to signal drag operation
@@ -914,9 +913,27 @@ export class TabsTitleControl extends TitleControl {
 				this.updateDropFeedback(tab, false, index);
 			},
 
-			onDragEnd: () => {
+			onDragEnd: async e => {
 				tab.classList.remove('dragged-over');
 				this.updateDropFeedback(tab, false, index);
+
+				const data = this.editorTransfer.getData(DraggedEditorIdentifier.prototype);
+				if (data) {
+					// 获得拖拽的数据,此时是拖拽到了程序窗口之外,应当创建一个新的窗口
+					if (Array.isArray(data)) {
+						const auxiliaryEditorPart = await this.maybeCreateAuxiliaryEditorPartAt(e);
+						if (auxiliaryEditorPart) {
+							const targetGroup = auxiliaryEditorPart.activeGroup;
+							const draggedEditor = data[0].identifier;
+							const sourceGroup = this.editorGroupService.getGroup(draggedEditor.groupId);
+							if (sourceGroup) {
+								// daraggedEditor.editor是一个EditorInput对象
+								sourceGroup.moveEditor(draggedEditor.editor, targetGroup, { index: targetGroup.count });
+							}
+							targetGroup.focus();
+						}
+					}
+				}
 
 				this.editorTransfer.clearData(DraggedEditorIdentifier.prototype);
 			},
@@ -932,13 +949,23 @@ export class TabsTitleControl extends TitleControl {
 		return disposables;
 	}
 
+	protected async maybeCreateAuxiliaryEditorPartAt(e: DragEvent): Promise<IAuxiliaryEditorPart | undefined> {
+		const point = { x: e.screenX, y: e.screenY };
+		const bounds = {
+			x: point.x - 80,
+			y: point.y - 40
+		};
+
+		return this.editorGroupService.createAuxiliaryEditorPart({ bounds });
+	}
+
 	private isSupportedDropTransfer(e: DragEvent): boolean {
 		if (this.groupTransfer.hasData(DraggedEditorGroupIdentifier.prototype)) {
 			const data = this.groupTransfer.getData(DraggedEditorGroupIdentifier.prototype);
 			if (Array.isArray(data)) {
 				const group = data[0];
 				if (group.identifier === this.group.id) {
-					return false; // groups cannot be dropped on title area it originates from
+					return false; // editorGroupService cannot be dropped on title area it originates from
 				}
 			}
 
@@ -981,7 +1008,7 @@ export class TabsTitleControl extends TitleControl {
 	}
 
 	private computeTabLabels(): void {
-		const { labelFormat } = this.accessor.partOptions;
+		const { labelFormat } = this.editorGroupService.partOptions;
 		const { verbosity, shortenDuplicates } = this.getLabelConfigFlags(labelFormat);
 
 		// Build labels and descriptions for each editor
@@ -1121,7 +1148,7 @@ export class TabsTitleControl extends TitleControl {
 
 	private redrawTab(editor: EditorInput, index: number, tabContainer: HTMLElement, tabLabelWidget: IResourceLabel, tabLabel: EditorInputLabel, tabActionBar: ActionBar): void {
 		const isTabSticky = this.group.isSticky(index);
-		const options = this.accessor.partOptions;
+		const options = this.editorGroupService.partOptions;
 
 		// Label
 		this.redrawTabLabel(editor, index, tabContainer, tabLabelWidget, tabLabel);
@@ -1176,11 +1203,11 @@ export class TabsTitleControl extends TitleControl {
 		this.redrawTabBorders(index, tabContainer);
 
 		// Active / dirty state
-		this.redrawTabActiveAndDirty(this.accessor.activeGroup === this.group, editor, tabContainer, tabActionBar);
+		this.redrawTabActiveAndDirty(this.editorGroupService.activeGroup === this.group, editor, tabContainer, tabActionBar);
 	}
 
 	private redrawTabLabel(editor: EditorInput, index: number, tabContainer: HTMLElement, tabLabelWidget: IResourceLabel, tabLabel: EditorInputLabel): void {
-		const options = this.accessor.partOptions;
+		const options = this.editorGroupService.partOptions;
 
 		// Unless tabs are sticky compact, show the full label and description
 		// Sticky compact tabs will only show an icon if icons are enabled
@@ -1303,7 +1330,7 @@ export class TabsTitleControl extends TitleControl {
 			tabContainer.classList.add('dirty');
 
 			// Highlight modified tabs with a border if configured
-			if (this.accessor.partOptions.highlightModifiedTabs) {
+			if (this.editorGroupService.partOptions.highlightModifiedTabs) {
 				let modifiedBorderColor: string | null;
 				if (isGroupActive && isTabActive) {
 					modifiedBorderColor = this.getColor(TAB_ACTIVE_MODIFIED_BORDER);
@@ -1347,7 +1374,7 @@ export class TabsTitleControl extends TitleControl {
 	}
 
 	protected override prepareEditorActions(editorActions: IToolbarActions): IToolbarActions {
-		const isGroupActive = this.accessor.activeGroup === this.group;
+		const isGroupActive = this.editorGroupService.activeGroup === this.group;
 
 		// Active: allow all actions
 		if (isGroupActive) {
@@ -1385,7 +1412,7 @@ export class TabsTitleControl extends TitleControl {
 
 		// Wrap: we need to ask `offsetHeight` to get
 		// the real height of the title area with wrapping.
-		if (this.accessor.partOptions.wrapTabs && this.tabsAndActionsContainer?.classList.contains('wrapping')) {
+		if (this.editorGroupService.partOptions.wrapTabs && this.tabsAndActionsContainer?.classList.contains('wrapping')) {
 			total = this.tabsAndActionsContainer.offsetHeight;
 		} else {
 			total = TabsTitleControl.TAB_HEIGHT;
@@ -1410,7 +1437,7 @@ export class TabsTitleControl extends TitleControl {
 		// that can result in the browser doing a full page layout to validate them. To buffer
 		// this a little bit we try at least to schedule this work on the next animation frame.
 		if (!this.layoutScheduler.value) {
-			const scheduledLayout = scheduleAtNextAnimationFrame(() => {
+			const scheduledLayout = scheduleAtNextAnimationFrame(getWindow(this.titleContainer), () => {
 				this.doLayout(this.dimensions, this.layoutScheduler.value?.options /* ensure to pick up latest options */);
 
 				this.layoutScheduler.clear();
@@ -1510,7 +1537,7 @@ export class TabsTitleControl extends TitleControl {
 		}
 
 		// Setting enabled: selectively enable wrapping if possible
-		if (this.accessor.partOptions.wrapTabs) {
+		if (this.editorGroupService.partOptions.wrapTabs) {
 			const visibleTabsWidth = tabsContainer.offsetWidth;
 			const allTabsWidth = tabsContainer.scrollWidth;
 			const lastTabFitsWrapped = () => {
@@ -1645,7 +1672,7 @@ export class TabsTitleControl extends TitleControl {
 		let stickyTabsWidth = 0;
 		if (this.group.stickyCount > 0) {
 			let stickyTabWidth = 0;
-			switch (this.accessor.partOptions.pinnedTabSizing) {
+			switch (this.editorGroupService.partOptions.pinnedTabSizing) {
 				case 'compact':
 					stickyTabWidth = TabsTitleControl.TAB_WIDTH.compact;
 					break;
@@ -1659,7 +1686,7 @@ export class TabsTitleControl extends TitleControl {
 
 		// Figure out if active tab is positioned static which has an
 		// impact on whether to reveal the tab or not later
-		let activeTabPositionStatic = this.accessor.partOptions.pinnedTabSizing !== 'normal' && this.group.isSticky(activeIndex);
+		let activeTabPositionStatic = this.editorGroupService.partOptions.pinnedTabSizing !== 'normal' && this.group.isSticky(activeIndex);
 
 		// Special case: we have sticky tabs but the available space for showing tabs
 		// is little enough that we need to disable sticky tabs sticky positioning
@@ -1793,7 +1820,7 @@ export class TabsTitleControl extends TitleControl {
 
 	private originatesFromTabActionBar(e: MouseEvent | GestureEvent): boolean {
 		let element: HTMLElement;
-		if (e instanceof MouseEvent) {
+		if (isMouseEvent(e)) {
 			element = (e.target || e.srcElement) as HTMLElement;
 		} else {
 			element = (e as GestureEvent).initialTarget as HTMLElement;
@@ -1812,14 +1839,13 @@ export class TabsTitleControl extends TitleControl {
 		if (this.groupTransfer.hasData(DraggedEditorGroupIdentifier.prototype)) {
 			const data = this.groupTransfer.getData(DraggedEditorGroupIdentifier.prototype);
 			if (Array.isArray(data)) {
-				const sourceGroup = this.accessor.getGroup(data[0].identifier);
+				const sourceGroup = this.editorGroupService.getGroup(data[0].identifier);
 				if (sourceGroup) {
 					const mergeGroupOptions: IMergeGroupOptions = { index: targetIndex };
 					if (!this.isMoveOperation(e, sourceGroup.id)) {
 						mergeGroupOptions.mode = MergeGroupMode.COPY_EDITORS;
 					}
-
-					this.accessor.mergeGroup(sourceGroup, this.group, mergeGroupOptions);
+					this.editorGroupService.mergeGroup(sourceGroup, this.group, mergeGroupOptions);
 				}
 
 				this.group.focus();
@@ -1832,9 +1858,8 @@ export class TabsTitleControl extends TitleControl {
 			const data = this.editorTransfer.getData(DraggedEditorIdentifier.prototype);
 			if (Array.isArray(data)) {
 				const draggedEditor = data[0].identifier;
-				const sourceGroup = this.accessor.getGroup(draggedEditor.groupId);
+				const sourceGroup = this.editorGroupService.getGroup(draggedEditor.groupId);
 				if (sourceGroup) {
-
 					// Move editor to target position and index
 					if (this.isMoveOperation(e, draggedEditor.groupId, draggedEditor.editor)) {
 						sourceGroup.moveEditor(draggedEditor.editor, this.group, { index: targetIndex });

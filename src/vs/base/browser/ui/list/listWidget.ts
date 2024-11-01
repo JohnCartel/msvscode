@@ -4,7 +4,7 @@
  *--------------------------------------------------------------------------------------------*/
 
 import { IDragAndDropData } from 'vs/base/browser/dnd';
-import { createStyleSheet } from 'vs/base/browser/dom';
+import { createStyleSheet, isMouseEvent } from 'vs/base/browser/dom';
 import { DomEmitter, stopEvent } from 'vs/base/browser/event';
 import { IKeyboardEvent, StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { Gesture } from 'vs/base/browser/touch';
@@ -43,8 +43,7 @@ interface IRenderedContainer {
 	index: number;
 }
 
-class TraitRenderer<T> implements IListRenderer<T, ITraitTemplateData>
-{
+class TraitRenderer<T> implements IListRenderer<T, ITraitTemplateData> {
 	private renderedElements: IRenderedContainer[] = [];
 
 	constructor(private trait: Trait<T>) { }
@@ -593,7 +592,7 @@ export function isSelectionRangeChangeEvent(event: IListMouseEvent<any> | IListT
 }
 
 function isMouseRightClick(event: UIEvent): boolean {
-	return event instanceof MouseEvent && event.button === 2;
+	return isMouseEvent(event) && event.button === 2;
 }
 
 const DefaultMultipleSelectionController = {

@@ -18,6 +18,7 @@ import { SerializableObjectWithBuffers } from 'vs/workbench/services/extensions/
 import type * as vscode from 'vscode';
 import * as extHostProtocol from './extHost.protocol';
 
+// vscode.Webview的实现（ExtHost插件宿主进程）
 export class ExtHostWebview implements vscode.Webview {
 
 	readonly #handle: extHostProtocol.WebviewHandle;

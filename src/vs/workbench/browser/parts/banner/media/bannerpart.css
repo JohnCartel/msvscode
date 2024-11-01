@@ -10,13 +10,14 @@
 	height: 100%;
 	font-size: 12px;
 	display: flex;
+	flex-direction: column;
 	overflow: visible;
 }
 
 .monaco-workbench .part.banner .icon-container {
 	display: flex;
 	flex-shrink: 0;
-	align-items: center;
+	align-items: left;
 	padding: 0 6px 0 10px;
 }
 
@@ -62,4 +63,67 @@
 
 .monaco-workbench .part.banner .action-container {
 	padding: 0 10px 0 6px;
+}
+
+.monaco-workbench .part.banner .msg{
+	display: flex;
+	/* flex-direction: row;
+	align-items: left; */
+}
+
+.maintoolbar {
+	width: 100%;
+	display: flex;
+	flex-wrap: nowrap;
+	justify-content: flex-start;
+	padding: 4px;
+	background-color: var(--vscode-sideBar-background); /*var(--vscode-debugToolBar-background);*/
+}
+
+.monaco-workbench .part.banner:focus
+{
+	outline: none;
+}
+
+.maintoolbar .toolbar-group {
+	display: flex;
+	flex-direction: column;
+	margin-right: 5px;
+}
+
+.maintoolbar .monaco-action-bar {
+	height: 24px;
+}
+
+.maintoolbar .codicon {
+	margin: 0 2px;
+	padding: 4px;
+	cursor: pointer;
+	border-radius: 2px;
+	transition: color 0.3s ease, background-color 0.3s ease;
+}
+
+.maintoolbar .separator {
+	height: 100%;
+	background-color: #ccc;
+	margin: 0 4px 0 0px;
+	width: 1px;
+}
+
+.monaco-workbench .part.banner .msg
+{
+	background-color: var(--vscode-banner-background);
+}
+
+.monaco-workbench .part.banner .msg,
+.monaco-workbench .part.banner .msg .action-container .codicon,
+.monaco-workbench .part.banner .msg .message-actions-container .monaco-link,
+.monaco-workbench .part.banner .msg .message-container a
+{
+	color: var(--vscode-banner-foreground);
+}
+
+.monaco-workbench .part.banner .msg .icon-container .codicon
+{
+	color: var(--vscode-banner-iconForeground);
 }

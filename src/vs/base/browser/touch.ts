@@ -225,7 +225,7 @@ export class Gesture extends Disposable {
 
 				// We need to get all the dispatch targets on the start of the inertia event
 				const dispatchTo = this.targets.filter(t => data.initialTarget instanceof Node && t.contains(data.initialTarget));
-				this.inertia(dispatchTo, timestamp,		// time now
+				this.inertia(DomUtils.getWindow(e), dispatchTo, timestamp,		// time now
 					Math.abs(deltaX) / deltaT,	// speed
 					deltaX > 0 ? 1 : -1,		// x direction
 					finalX,						// x now
@@ -287,8 +287,8 @@ export class Gesture extends Disposable {
 		});
 	}
 
-	private inertia(dispatchTo: EventTarget[], t1: number, vX: number, dirX: number, x: number, vY: number, dirY: number, y: number): void {
-		this.handle = DomUtils.scheduleAtNextAnimationFrame(() => {
+	private inertia(targetWindow: Window, dispatchTo: EventTarget[], t1: number, vX: number, dirX: number, x: number, vY: number, dirY: number, y: number): void {
+		this.handle = DomUtils.scheduleAtNextAnimationFrame(targetWindow, () => {
 			const now = Date.now();
 
 			// velocity: old speed + accel_over_time
@@ -316,7 +316,7 @@ export class Gesture extends Disposable {
 			dispatchTo.forEach(d => d.dispatchEvent(evt));
 
 			if (!stopped) {
-				this.inertia(dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
+				this.inertia(targetWindow, dispatchTo, now, vX, dirX, x + delta_pos_x, vY, dirY, y + delta_pos_y);
 			}
 		});
 	}

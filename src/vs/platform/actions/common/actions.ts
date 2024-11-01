@@ -188,6 +188,10 @@ export class MenuId {
 		MenuId._instances.set(identifier, this);
 		this.id = identifier;
 	}
+
+	static getMenuIdbyId(id: string): MenuId {
+		return MenuId._instances.get(id) ?? new MenuId(id);
+	}
 }
 
 export interface IMenuActionOptions {

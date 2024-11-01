@@ -109,7 +109,8 @@ if ((<any>self).Worker) {
 		const bootstrapFnSource = (function bootstrapFn(workerUrl: string) {
 			function asWorkerBrowserUrl(url: string | URL | TrustedScriptURL): any {
 				if (typeof url === 'string' || url instanceof URL) {
-					return String(url).replace(/^file:\/\//i, 'vscode-file://vscode-app');
+					// return String(url).replace(/^file:\/\//i, 'vscode-file://vscode-app');
+					return String(url).replace(/^file:\/\//i, '///');
 				}
 				return url;
 			}

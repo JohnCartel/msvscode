@@ -239,10 +239,10 @@ export class NoTabsTitleControl extends TitleControl {
 
 	private redraw(): void {
 		const editor = withNullAsUndefined(this.group.activeEditor);
-		const options = this.accessor.partOptions;
+		const options = this.editorGroupService.partOptions;
 
 		const isEditorPinned = editor ? this.group.isPinned(editor) : false;
-		const isGroupActive = this.accessor.activeGroup === this.group;
+		const isGroupActive = this.editorGroupService.activeGroup === this.group;
 
 		this.activeLabel = { editor, pinned: isEditorPinned };
 
@@ -271,7 +271,7 @@ export class NoTabsTitleControl extends TitleControl {
 			this.updateEditorDirty(editor);
 
 			// Editor Label
-			const { labelFormat } = this.accessor.partOptions;
+			const { labelFormat } = this.editorGroupService.partOptions;
 			let description: string;
 			if (this.breadcrumbsControl && !this.breadcrumbsControl.isHidden()) {
 				description = ''; // hide description when showing breadcrumbs
@@ -323,7 +323,7 @@ export class NoTabsTitleControl extends TitleControl {
 	}
 
 	protected override prepareEditorActions(editorActions: IToolbarActions): IToolbarActions {
-		const isGroupActive = this.accessor.activeGroup === this.group;
+		const isGroupActive = this.editorGroupService.activeGroup === this.group;
 
 		// Active: allow all actions
 		if (isGroupActive) {

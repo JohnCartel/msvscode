@@ -497,6 +497,9 @@ namespace schema {
 	export type IUserFriendlyIcon = string | { light: string; dark: string };
 
 	export function isValidCommand(command: IUserFriendlyCommand, collector: ExtensionMessageCollector): boolean {
+		if (command.command === 'git.setLogLevel') {
+			console.log('Command: ', command.command, new Error().stack);
+		}
 		if (!command) {
 			collector.error(localize('nonempty', "expected non-empty value."));
 			return false;

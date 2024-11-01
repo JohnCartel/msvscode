@@ -38,6 +38,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 	private _options: WebviewOptions;
 
 	private _owner: any = undefined;
+	private _window: Window | undefined = undefined;
 
 	private readonly _scopedContextKeyService = this._register(new MutableDisposable<IContextKeyService>());
 	private _findWidgetVisible: IContextKey<boolean> | undefined;
@@ -46,6 +47,10 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 	public readonly id: string;
 	public readonly providedId?: string;
 	public readonly origin: string;
+
+	public set window(window: Window) {
+		this._window = window;
+	}
 
 	public constructor(
 		initInfo: WebviewInitInfo,
@@ -62,6 +67,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 		this._extension = initInfo.extension;
 		this._options = initInfo.options;
 		this._contentOptions = initInfo.contentOptions;
+		this._window = initInfo.window;
 	}
 
 	public get isFocused() {
@@ -74,6 +80,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 	public onDidDispose = this._onDidDispose.event;
 
 	override dispose() {
+
 		this._isDisposed = true;
 
 		this._container?.remove();
@@ -98,14 +105,35 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 			throw new Error(`DynamicWebviewEditorOverlay has been disposed`);
 		}
 
+		if (this._container && this._window && this._window !== this._container.ownerDocument?.defaultView) {
+			this._container.remove();
+			this._container = undefined;
+		}
+
+		const id = `webview-overlay-${this.id}`;
 		if (!this._container) {
-			this._container = document.createElement('div');
-			this._container.id = `webview-${this.id}`;
-			this._container.style.visibility = 'hidden';
+			// 避免重复创建
+			const element = this._window?.document.getElementById(id) || document.getElementById(id);
+			if (element) {
+				this._container = element as HTMLElement;
+			}
+			else {
+				this._container = document.createElement('div');
+				this._container.id = id;
+				this._container.style.visibility = 'hidden';
+			}
+
 
 			// Webviews cannot be reparented in the dom as it will destroy their contents.
 			// Mount them to a high level node to avoid this.
-			this._layoutService.container.appendChild(this._container);
+			// 把webview挂载到workbench节点上 ****, 创建一个div容器，挂载到workbench节点上
+
+			if (!this._window) {
+				this._layoutService.container.appendChild(this._container);
+			}
+			else {
+				this._layoutService.getContainer(this._window).appendChild(this._container); // 挂载到window的容器上
+			}
 		}
 
 		return this._container;
@@ -151,6 +179,7 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 			this._webview.clear();
 			this._webviewEvents.clear();
 		}
+		this._container = undefined; // 清理container
 	}
 
 	public layoutWebviewOverElement(element: HTMLElement, dimension?: Dimension, clippingContainer?: HTMLElement) {
@@ -179,8 +208,11 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 		this._container.style.left = `${frameRect.left - containerRect.left - parentBorderLeft}px`;
 		this._container.style.width = `${dimension ? dimension.width : frameRect.width}px`;
 		this._container.style.height = `${dimension ? dimension.height : frameRect.height}px`;
+		// this._container.style.backgroundColor = `red`;
 
 		if (clippingContainer) {
+			// 计算裁剪区域的边界框，并应用于容器。
+			// The clipping rect should only include the part of the iframe that fits within the bounds of the editor window.
 			const { top, left, right, bottom } = computeClippingRect(frameRect, clippingContainer);
 			this._container.style.clipPath = `polygon(${left}px ${top}px, ${right}px ${top}px, ${right}px ${bottom}px, ${left}px ${bottom}px)`;
 		}
@@ -191,6 +223,12 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 			throw new Error('Webview overlay is disposed');
 		}
 
+		if (!this._webview.value?.html) {
+			if (this._webview.value) {
+			}
+			this._webview.value = undefined;
+		}
+
 		if (!this._webview.value) {
 			const webview = this._webviewService.createWebviewElement({
 				id: this.id,
@@ -199,7 +237,9 @@ export class OverlayWebview extends Disposable implements IOverlayWebview {
 				options: this._options,
 				contentOptions: this._contentOptions,
 				extension: this.extension,
+				container: this.container
 			});
+
 			this._webview.value = webview;
 			webview.state = this._state;
 

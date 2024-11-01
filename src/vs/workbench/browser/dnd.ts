@@ -15,7 +15,7 @@ import { Emitter } from 'vs/base/common/event';
 import { Disposable, DisposableStore, IDisposable } from 'vs/base/common/lifecycle';
 import { stringify } from 'vs/base/common/marshalling';
 import { Mimes } from 'vs/base/common/mime';
-import { FileAccess, Schemas } from 'vs/base/common/network';
+import { Schemas } from 'vs/base/common/network';
 import { isWindows } from 'vs/base/common/platform';
 import { basename, isEqual } from 'vs/base/common/resources';
 import { URI } from 'vs/base/common/uri';
@@ -239,13 +239,14 @@ export function fillEditorsDragData(accessor: ServicesAccessor, resourcesOrEdito
 	// - Chrome/Edge only
 	// - only a single file is supported
 	// - only file:/ resources are supported
-	const firstFile = fileSystemResources.find(({ isDirectory }) => !isDirectory);
-	if (firstFile) {
-		const firstFileUri = FileAccess.asFileUri(firstFile.resource); // enforce `file:` URIs
-		if (firstFileUri.scheme === Schemas.file) {
-			event.dataTransfer.setData(DataTransfers.DOWNLOAD_URL, [Mimes.binary, basename(firstFile.resource), firstFileUri.toString()].join(':'));
-		}
-	}
+	// @rengy 删除文件拖拽的下载链接
+	// const firstFile = fileSystemResources.find(({ isDirectory }) => !isDirectory);
+	// if (firstFile) {
+	// 	const firstFileUri = FileAccess.asFileUri(firstFile.resource); // enforce `file:` URIs
+	// 	if (firstFileUri.scheme === Schemas.file) {
+	// 		event.dataTransfer.setData(DataTransfers.DOWNLOAD_URL, [Mimes.binary, basename(firstFile.resource), firstFileUri.toString()].join(':'));
+	// 	}
+	// }
 
 	// Resource URLs: allows to drop multiple file resources to a target in VS Code
 	const files = fileSystemResources.filter(({ isDirectory }) => !isDirectory);

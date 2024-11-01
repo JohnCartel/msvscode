@@ -89,7 +89,9 @@ export class IntegrityService implements IIntegrityService {
 		}
 
 		const checksumFailMoreInfoUrl = this.productService.checksumFailMoreInfoUrl;
-		const message = localize('integrity.prompt', "Your {0} installation appears to be corrupt. Please reinstall.", this.productService.nameShort);
+		const message = localize('integrity.prompt', "Your {0} installation appears to be corrupt. Please reinstall.{1}",
+			this.productService.nameShort,
+			checksumFailMoreInfoUrl);
 		if (checksumFailMoreInfoUrl) {
 			this.notificationService.prompt(
 				Severity.Warning,
@@ -135,6 +137,7 @@ export class IntegrityService implements IIntegrityService {
 			}
 		}
 
+		// isPure = true;
 		return {
 			isPure: isPure,
 			proof: allResults

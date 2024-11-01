@@ -123,7 +123,20 @@ export class EditorPanes extends Disposable {
 
 	async openEditor(editor: EditorInput, options: IEditorOptions | undefined, context: IEditorOpenContext = Object.create(null)): Promise<IOpenEditorResult> {
 		try {
+			// if (getWindow(this.parent) !== window && editor.hasCapability(EditorInputCapabilities.AuxWindowUnsupported)) {
+			// 	return await this.doShowError(createEditorOpenError("副窗口不支持此编辑器，请在主窗口打开", [
+			// 		toAction({
+			// 			id: 'workbench.editor.action.closeEditor', label: localize('openFolder', "Close Editor"), run: async () => {
+			// 				return this.groupView.closeEditor(editor);
+			// 			}
+			// 		})
+			// 	], { forceMessage: true, forceSeverity: Severity.Warning }), editor, options, context);
+			// }
+			// // Open editor normally
+			// else {
+			// 打开编辑器
 			return await this.doOpenEditor(this.getEditorPaneDescriptor(editor), editor, options, context);
+			// }
 		} catch (error) {
 
 			// First check if caller instructed us to ignore error handling

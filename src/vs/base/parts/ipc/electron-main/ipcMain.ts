@@ -111,7 +111,7 @@ class ValidatedIpcMain implements Event.NodeEventEmitter {
 		const sender = event.senderFrame;
 
 		const url = sender.url;
-		if (!url) {
+		if (!url || url === 'about:blank') {
 			return true; // TODO@electron this only seems to happen from playwright runs (https://github.com/microsoft/vscode/issues/147301)
 		}
 

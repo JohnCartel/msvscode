@@ -239,15 +239,20 @@ export class ActivitybarPart extends Part implements IPaneCompositeSelectorPart 
 		return actions;
 	}
 
+	// 重要，需要处理的事件
 	private registerListeners(): void {
 
 		// View Container Changes
-		this._register(this.viewDescriptorService.onDidChangeViewContainers(({ added, removed }) => this.onDidChangeViewContainers(added, removed)));
-		this._register(this.viewDescriptorService.onDidChangeContainerLocation(({ viewContainer, from, to }) => this.onDidChangeViewContainerLocation(viewContainer, from, to)));
+		this._register(this.viewDescriptorService.onDidChangeViewContainers(({ added, removed }) => {
+			return this.onDidChangeViewContainers(added, removed);
+		}));
+		this._register(this.viewDescriptorService.onDidChangeContainerLocation(({ viewContainer, from, to }) => { return this.onDidChangeViewContainerLocation(viewContainer, from, to); }));
 
 		// View Container Visibility Changes
-		this.paneCompositePart.onDidPaneCompositeOpen(e => this.onDidChangeViewContainerVisibility(e.getId(), true));
-		this.paneCompositePart.onDidPaneCompositeClose(e => this.onDidChangeViewContainerVisibility(e.getId(), false));
+		this.paneCompositePart.onDidPaneCompositeOpen(e => {
+			return this.onDidChangeViewContainerVisibility(e.getId(), true);
+		});
+		this.paneCompositePart.onDidPaneCompositeClose(e => { return this.onDidChangeViewContainerVisibility(e.getId(), false); });
 
 		// Extension registration
 		const disposables = this._register(new DisposableStore());
@@ -519,10 +524,15 @@ export class ActivitybarPart extends Part implements IPaneCompositeSelectorPart 
 		this.globalActivityActionBar = this._register(new ActionBar(container, {
 			actionViewItemProvider: action => {
 				if (action.id === 'workbench.actions.manage') {
-					return this.instantiationService.createInstance(GlobalActivityActionViewItem, action as ActivityAction, () => this.compositeBar.getContextMenuActions(), (theme: IColorTheme) => this.getActivitybarItemColors(theme), this.getActivityHoverOptions());
+					return this.instantiationService.createInstance(
+						GlobalActivityActionViewItem,
+						action as ActivityAction,
+						() => this.compositeBar.getContextMenuActions(),
+						(theme: IColorTheme) => this.getActivitybarItemColors(theme),
+						this.getActivityHoverOptions());
 				}
 
-				if (action.id === 'workbench.actions.accounts') {
+				if (action.id === 'workbench.actions.accounts' || action.id === 'workbench.actions.manage1') {
 					return this.instantiationService.createInstance(AccountsActivityActionViewItem, action as ActivityAction, () => this.compositeBar.getContextMenuActions(), (theme: IColorTheme) => this.getActivitybarItemColors(theme), this.getActivityHoverOptions());
 				}
 

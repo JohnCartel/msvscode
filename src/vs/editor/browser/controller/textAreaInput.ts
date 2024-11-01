@@ -558,7 +558,9 @@ export class TextAreaInput extends Disposable {
 		this._setHasFocus(true);
 
 		// If the editor is off DOM, focus cannot be really set, so let's double check that we have managed to set the focus
-		this.refreshFocusState();
+		// TODO@rengy:这里有个异步问题，导致下面的代码执行时，_hasFocus可能还是false，导致无法写入聚焦文本
+		// 但是，下面的代码是修改bug时引入的，需要对原来的bug做验证分析。
+		// this.refreshFocusState();
 	}
 
 	public isFocused(): boolean {

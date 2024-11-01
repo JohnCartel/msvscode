@@ -10,7 +10,7 @@ import { IConfigurationService, IConfigurationChangeEvent } from 'vs/platform/co
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { INativeWorkbenchEnvironmentService } from 'vs/workbench/services/environment/electron-sandbox/environmentService';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
-import { isMacintosh, isWindows, isLinux } from 'vs/base/common/platform';
+import { isMacintosh, isWindows, isLinux, isNative } from 'vs/base/common/platform';
 import { IMenuService, MenuId } from 'vs/platform/actions/common/actions';
 import { TitlebarPart as BrowserTitleBarPart } from 'vs/workbench/browser/parts/titlebar/titlebarPart';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
@@ -218,11 +218,13 @@ export class TitlebarPart extends BrowserTitleBarPart {
 		super.updateStyles();
 
 		// WCO styles only supported on Windows currently
-		if (useWindowControlsOverlay(this.configurationService, this.environmentService)) {
+		if (useWindowControlsOverlay(this.configurationService)) {
 			if (!this.cachedWindowControlStyles ||
 				this.cachedWindowControlStyles.bgColor !== this.element.style.backgroundColor ||
 				this.cachedWindowControlStyles.fgColor !== this.element.style.color) {
-				this.nativeHostService.updateTitleBarOverlay({ backgroundColor: this.element.style.backgroundColor, foregroundColor: this.element.style.color });
+				//this.nativeHostService.updateTitleBarOverlay(this.element.style.backgroundColor, this.element.style.color, Math.round(this.minimumHeight * getZoomFactor()));
+				// todo@rengy check
+				this.nativeHostService.updateTitleBarOverlay({ backgroundColor: this.element.style.backgroundColor, foregroundColor: this.element.style.color, height: 30 });
 			}
 		}
 	}
@@ -230,11 +232,13 @@ export class TitlebarPart extends BrowserTitleBarPart {
 	override layout(width: number, height: number): void {
 		super.layout(width, height);
 
-		if (useWindowControlsOverlay(this.configurationService, this.environmentService)) {
-			const newHeight = Math.trunc(this.element.clientHeight * getZoomFactor());
+		if (useWindowControlsOverlay(this.configurationService) ||
+			(isMacintosh && isNative && getTitleBarStyle(this.configurationService) === 'custom')) {
+			const newHeight = Math.round(height * getZoomFactor());
 			if (newHeight !== this.cachedWindowControlHeight) {
 				this.cachedWindowControlHeight = newHeight;
-				this.nativeHostService.updateTitleBarOverlay({ height: newHeight });
+				// todo@rengy check
+				this.nativeHostService.updateTitleBarOverlay({ backgroundColor: this.element.style.backgroundColor, foregroundColor: this.element.style.color, height: newHeight });
 			}
 		}
 	}

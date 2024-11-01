@@ -1435,7 +1435,7 @@ export class NotebookEditorWidget extends Disposable implements INotebookEditorD
 			}
 			hasPendingChangeContentHeight = true;
 
-			this._localStore.add(DOM.scheduleAtNextAnimationFrame(() => {
+			this._localStore.add(DOM.scheduleAtNextAnimationFrame(DOM.getWindow(this.getDomNode()), () => {
 				hasPendingChangeContentHeight = false;
 				this._updateScrollHeight();
 				this._onDidChangeContentHeight.fire(this._list.getScrollHeight());
@@ -1653,6 +1653,7 @@ export class NotebookEditorWidget extends Disposable implements INotebookEditorD
 			metadata: model.metadata,
 		});
 	}
+
 
 	restoreListViewState(viewState: INotebookEditorViewState | undefined): void {
 		if (!this.viewModel) {
@@ -2199,7 +2200,7 @@ export class NotebookEditorWidget extends Disposable implements INotebookEditorD
 		if (context === CellLayoutContext.Fold) {
 			doLayout();
 		} else {
-			const layoutDisposable = DOM.scheduleAtNextAnimationFrame(doLayout);
+			const layoutDisposable = DOM.scheduleAtNextAnimationFrame(DOM.getWindow(this.getDomNode()), doLayout);
 
 			this._pendingLayouts?.set(cell, toDisposable(() => {
 				layoutDisposable.dispose();
@@ -2873,7 +2874,7 @@ export class NotebookEditorWidget extends Disposable implements INotebookEditorD
 		this._pendingOutputHeightAcks.set(outputId, { cellId: cellInfo.cellId, outputId, height });
 
 		if (wasEmpty) {
-			DOM.scheduleAtNextAnimationFrame(() => {
+			DOM.scheduleAtNextAnimationFrame(DOM.getWindow(this.getDomNode()), () => {
 				this._debug('ack height');
 				this._updateScrollHeight();
 

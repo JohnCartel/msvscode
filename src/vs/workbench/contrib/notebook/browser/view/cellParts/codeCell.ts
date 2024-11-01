@@ -145,7 +145,7 @@ export class CodeCell extends Disposable {
 
 	private updateForLayout(): void {
 		this._pendingLayout?.dispose();
-		this._pendingLayout = DOM.modify(() => {
+		this._pendingLayout = DOM.modify(DOM.getWindow(this.notebookEditor.getDomNode()), () => {
 			this.cellParts.forEach(part => {
 				part.updateInternalLayoutNow(this.viewCell);
 			});

@@ -120,6 +120,55 @@ export class VSBuffer {
 		}
 	}
 
+	// 用于测试的输出
+	toStringEx(maxLength: number, all0x: boolean = false, exchar: string | undefined = undefined): string {
+		let result = '';
+		const length = Math.min(this.byteLength, maxLength);
+
+		for (let i = 0; i < length; i++) {
+			const byte = this.readUInt8(i);
+			if (byte >= 32 && byte <= 126 && !all0x) { // ASCII printable characters range
+				result += String.fromCharCode(byte);
+			} else {
+				if (exchar) {
+					result += `${exchar}`;
+				}
+				else {
+					result += `[${byte.toString(16).padStart(2, '0')}]`;
+				}
+			}
+		}
+		return result;
+	}
+
+	// 判断内存中是否包含指定的字符串
+	has(substring: string): boolean {
+		const bufferLength = this.byteLength;
+		const substringBuffer = VSBuffer.fromString(substring);
+		const substringLength = substringBuffer.byteLength;
+
+		if (substringLength === 0) {
+			return false;
+		}
+
+		for (let i = 0; i <= bufferLength - substringLength; i++) {
+			let found = false;
+			if (this.readUInt8(i) === substringBuffer.readUInt8(0)) {
+				found = true;
+				for (let j = 0; j < substringLength; j++) {
+					if (this.readUInt8(i + j) !== substringBuffer.readUInt8(j)) {
+						found = false;
+						break;
+					}
+				}
+			}
+			if (found) {
+				return true;
+			}
+		}
+		return false;
+	}
+
 	slice(start?: number, end?: number): VSBuffer {
 		// IMPORTANT: use subarray instead of slice because TypedArray#slice
 		// creates shallow copy and NodeBuffer#slice doesn't. The use of subarray

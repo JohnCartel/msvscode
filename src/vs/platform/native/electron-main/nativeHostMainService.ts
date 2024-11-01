@@ -36,7 +36,7 @@ import { IPartsSplash } from 'vs/platform/theme/common/themeService';
 import { IThemeMainService } from 'vs/platform/theme/electron-main/themeMainService';
 import { ICodeWindow } from 'vs/platform/window/electron-main/window';
 import { IColorScheme, IOpenedWindow, IOpenEmptyWindowOptions, IOpenWindowOptions, IWindowOpenable } from 'vs/platform/window/common/window';
-import { IWindowsMainService, OpenContext } from 'vs/platform/windows/electron-main/windows';
+import { IWindowsMainService, OpenContext, updateAuxWindowsTitleControl } from 'vs/platform/windows/electron-main/windows';
 import { isWorkspaceIdentifier } from 'vs/platform/workspace/common/workspace';
 import { IWorkspacesManagementMainService } from 'vs/platform/workspaces/electron-main/workspacesManagementMainService';
 import { VSBuffer } from 'vs/base/common/buffer';
@@ -226,6 +226,18 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		}
 	}
 
+	async updateAuxTitleBarOverlay(windowId: number | undefined, backgroundColor: string, foregroundColor: string): Promise<void> {
+		console.log('更新theme, 窗口ID', windowId);
+		updateAuxWindowsTitleControl(backgroundColor, foregroundColor);
+	}
+
+
+	// async updateWindowControls(windowId: number | undefined, options: { height?: number; backgroundColor?: string; foregroundColor?: string }): Promise<void> {
+	// 	const window = this.windowById(windowId);
+	// 	if (window) {
+	// 		window.updateWindowControls(options);
+	// 	}
+	// }
 	async focusWindow(windowId: number | undefined, options?: { windowId?: number; force?: boolean }): Promise<void> {
 		if (options && typeof options.windowId === 'number') {
 			windowId = options.windowId;
@@ -764,6 +776,12 @@ export class NativeHostMainService extends Disposable implements INativeHostMain
 		if (window?.win) {
 			const contents = window.win.webContents;
 			contents.toggleDevTools();
+		}
+
+		for (const browserWindow of BrowserWindow.getAllWindows()) {
+			if (browserWindow.webContents.getURL() === 'about:blank') {
+				browserWindow.webContents.toggleDevTools();
+			}
 		}
 	}
 

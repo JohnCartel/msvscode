@@ -198,6 +198,13 @@ class ElementPath {
 		);
 	}
 
+	public static isChildOfOverflowGuard(path: Uint8Array): boolean {
+		return (
+			path.length >= 1
+			&& path[0] === PartFingerprint.OverflowGuard
+		);
+	}
+
 	public static isChildOfOverflowingContentWidgets(path: Uint8Array): boolean {
 		return (
 			path.length >= 1
@@ -329,7 +336,7 @@ export class HitTestContext {
 	}
 
 	private static _findAttribute(element: Element, attr: string, stopAt: Element): string | null {
-		while (element && element !== document.body) {
+		while (element && element !== element.ownerDocument.body) {
 			if (element.hasAttribute && element.hasAttribute(attr)) {
 				return element.getAttribute(attr);
 			}
@@ -495,6 +502,16 @@ export class MouseTargetFactory {
 		const request = new HitTestRequest(ctx, editorPos, pos, relativePos, target);
 		try {
 			const r = MouseTargetFactory._createMouseTarget(ctx, request, false);
+
+			if (r.type === MouseTargetType.CONTENT_TEXT) {
+				// Snap to the nearest soft tab boundary if atomic soft tabs are enabled.
+				if (ctx.stickyTabStops && r.position !== null) {
+					const position = MouseTargetFactory._snapToSoftTabBoundary(r.position, ctx.viewModel);
+					const range = EditorRange.fromPositions(position, position).plusRange(r.range);
+					return request.fulfillContentText(position, range, r.detail);
+				}
+			}
+
 			// console.log(MouseTarget.toString(r));
 			return r;
 		} catch (err) {
@@ -527,6 +544,11 @@ export class MouseTargetFactory {
 		const resolvedRequest = <ResolvedHitTestRequest>request;
 
 		let result: IMouseTarget | null = null;
+
+		if (!ElementPath.isChildOfOverflowGuard(request.targetPath) && !ElementPath.isChildOfOverflowingContentWidgets(request.targetPath)) {
+			// We only render dom nodes inside the overflow guard or in the overflowing content widgets
+			result = result || request.fulfillUnknown();
+		}
 
 		result = result || MouseTargetFactory._hitTestContentWidget(ctx, resolvedRequest);
 		result = result || MouseTargetFactory._hitTestOverlayWidget(ctx, resolvedRequest);
@@ -789,7 +811,7 @@ export class MouseTargetFactory {
 
 		const columnHorizontalOffset = visibleRange.left;
 
-		if (request.mouseContentHorizontalOffset === columnHorizontalOffset) {
+		if (Math.abs(request.mouseContentHorizontalOffset - columnHorizontalOffset) < 1) {
 			return request.fulfillContentText(pos, null, { mightBeForeignElement: !!injectedText, injectedText });
 		}
 
@@ -818,6 +840,8 @@ export class MouseTargetFactory {
 		const spanNodeClientRect = spanNode.getBoundingClientRect();
 		const mouseIsOverSpanNode = (spanNodeClientRect.left <= mouseCoordinates.clientX && mouseCoordinates.clientX <= spanNodeClientRect.right);
 
+		const rng: EditorRange | null = null;
+
 		for (let i = 1; i < points.length; i++) {
 			const prev = points[i - 1];
 			const curr = points[i];
@@ -840,7 +864,8 @@ export class MouseTargetFactory {
 				return request.fulfillContentText(resultPos, rng, { mightBeForeignElement: !mouseIsOverSpanNode || !!injectedText, injectedText });
 			}
 		}
-		return request.fulfillContentText(pos, null, { mightBeForeignElement: !mouseIsOverSpanNode || !!injectedText, injectedText });
+
+		return request.fulfillContentText(pos, rng, { mightBeForeignElement: !mouseIsOverSpanNode || !!injectedText, injectedText });
 	}
 
 	/**
@@ -851,22 +876,31 @@ export class MouseTargetFactory {
 		// In Chrome, especially on Linux it is possible to click between lines,
 		// so try to adjust the `hity` below so that it lands in the center of a line
 		const lineNumber = ctx.getLineNumberAtVerticalOffset(request.mouseVerticalOffset);
-		const lineVerticalOffset = ctx.getVerticalOffsetForLineNumber(lineNumber);
-		const lineCenteredVerticalOffset = lineVerticalOffset + Math.floor(ctx.lineHeight / 2);
-		let adjustedPageY = request.pos.y + (lineCenteredVerticalOffset - request.mouseVerticalOffset);
+		const lineStartVerticalOffset = ctx.getVerticalOffsetForLineNumber(lineNumber);
+		const lineEndVerticalOffset = lineStartVerticalOffset + ctx.lineHeight;
 
-		if (adjustedPageY <= request.editorPos.y) {
-			adjustedPageY = request.editorPos.y + 1;
-		}
-		if (adjustedPageY >= request.editorPos.y + request.editorPos.height) {
-			adjustedPageY = request.editorPos.y + request.editorPos.height - 1;
-		}
+		const isBelowLastLine = (
+			lineNumber === ctx.viewModel.getLineCount()
+			&& request.mouseVerticalOffset > lineEndVerticalOffset
+		);
 
-		const adjustedPage = new PageCoordinates(request.pos.x, adjustedPageY);
+		if (!isBelowLastLine) {
+			const lineCenteredVerticalOffset = Math.floor((lineStartVerticalOffset + lineEndVerticalOffset) / 2);
+			let adjustedPageY = request.pos.y + (lineCenteredVerticalOffset - request.mouseVerticalOffset);
 
-		const r = this._actualDoHitTestWithCaretRangeFromPoint(ctx, adjustedPage.toClientCoordinates());
-		if (r.type === HitTestResultType.Content) {
-			return r;
+			if (adjustedPageY <= request.editorPos.y) {
+				adjustedPageY = request.editorPos.y + 1;
+			}
+			if (adjustedPageY >= request.editorPos.y + request.editorPos.height) {
+				adjustedPageY = request.editorPos.y + request.editorPos.height - 1;
+			}
+
+			const adjustedPage = new PageCoordinates(request.pos.x, adjustedPageY);
+
+			const r = this._actualDoHitTestWithCaretRangeFromPoint(ctx, adjustedPage.toClientCoordinates());
+			if (r.type === HitTestResultType.Content) {
+				return r;
+			}
 		}
 
 		// Also try to hit test without the adjustment (for the edge cases that we are near the top or bottom)
@@ -883,7 +917,7 @@ export class MouseTargetFactory {
 				range = (<any>shadowRoot).caretRangeFromPoint(coords.clientX, coords.clientY);
 			}
 		} else {
-			range = (<any>document).caretRangeFromPoint(coords.clientX, coords.clientY);
+			range = (<any>ctx.viewDomNode.ownerDocument).caretRangeFromPoint(coords.clientX, coords.clientY);
 		}
 
 		if (!range || !range.startContainer) {
@@ -925,7 +959,7 @@ export class MouseTargetFactory {
 	 * Most probably Gecko
 	 */
 	private static _doHitTestWithCaretPositionFromPoint(ctx: HitTestContext, coords: ClientCoordinates): HitTestResult {
-		const hitResult: { offsetNode: Node; offset: number } = (<any>document).caretPositionFromPoint(coords.clientX, coords.clientY);
+		const hitResult: { offsetNode: Node; offset: number } = (<any>ctx.viewDomNode.ownerDocument).caretPositionFromPoint(coords.clientX, coords.clientY);
 
 		if (hitResult.offsetNode.nodeType === hitResult.offsetNode.TEXT_NODE) {
 			// offsetNode is expected to be the token text
@@ -977,9 +1011,9 @@ export class MouseTargetFactory {
 	private static _doHitTest(ctx: HitTestContext, request: BareHitTestRequest): HitTestResult {
 
 		let result: HitTestResult = new UnknownHitTestResult();
-		if (typeof (<any>document).caretRangeFromPoint === 'function') {
+		if (typeof (<any>ctx.viewDomNode.ownerDocument).caretRangeFromPoint === 'function') {
 			result = this._doHitTestWithCaretRangeFromPoint(ctx, request);
-		} else if ((<any>document).caretPositionFromPoint) {
+		} else if ((<any>ctx.viewDomNode.ownerDocument).caretPositionFromPoint) {
 			result = this._doHitTestWithCaretPositionFromPoint(ctx, request.pos.toClientCoordinates());
 		}
 		if (result.type === HitTestResultType.Content) {
@@ -990,15 +1024,11 @@ export class MouseTargetFactory {
 				result = new ContentHitTestResult(normalizedPosition, result.spanNode, injectedText);
 			}
 		}
-		// Snap to the nearest soft tab boundary if atomic soft tabs are enabled.
-		if (result.type === HitTestResultType.Content && ctx.stickyTabStops) {
-			result = new ContentHitTestResult(this._snapToSoftTabBoundary(result.position, ctx.viewModel), result.spanNode, result.injectedText);
-		}
 		return result;
 	}
 }
 
-export function shadowCaretRangeFromPoint(shadowRoot: ShadowRoot, x: number, y: number): Range {
+function shadowCaretRangeFromPoint(shadowRoot: ShadowRoot, x: number, y: number): Range {
 	const range = document.createRange();
 
 	// Get the element under the point
@@ -1015,8 +1045,14 @@ export function shadowCaretRangeFromPoint(shadowRoot: ShadowRoot, x: number, y: 
 		// Grab its rect
 		const rect = el.getBoundingClientRect();
 
-		// And its font
-		const font = window.getComputedStyle(el, null).getPropertyValue('font');
+		// And its font (the computed shorthand font property might be empty, see #3217)
+		const fontStyle = window.getComputedStyle(el, null).getPropertyValue('font-style');
+		const fontVariant = window.getComputedStyle(el, null).getPropertyValue('font-variant');
+		const fontWeight = window.getComputedStyle(el, null).getPropertyValue('font-weight');
+		const fontSize = window.getComputedStyle(el, null).getPropertyValue('font-size');
+		const lineHeight = window.getComputedStyle(el, null).getPropertyValue('line-height');
+		const fontFamily = window.getComputedStyle(el, null).getPropertyValue('font-family');
+		const font = `${fontStyle} ${fontVariant} ${fontWeight} ${fontSize}/${lineHeight} ${fontFamily}`;
 
 		// And also its txt content
 		const text = (el as any).innerText;

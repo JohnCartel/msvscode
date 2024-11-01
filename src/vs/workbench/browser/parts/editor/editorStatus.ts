@@ -577,8 +577,8 @@ export class EditorStatus extends Disposable implements IWorkbenchContribution {
 
 		if (!this.toRender) {
 			this.toRender = changed;
-
-			this.delayedRender.value = runAtThisOrScheduleAtNextAnimationFrame(() => {
+			// 只有主窗口有statusbar，其他窗口不需要渲染
+			this.delayedRender.value = runAtThisOrScheduleAtNextAnimationFrame(window, () => {
 				this.delayedRender.clear();
 
 				const toRender = this.toRender;

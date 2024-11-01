@@ -36,6 +36,7 @@ import { OpenRecentAction } from 'vs/workbench/browser/actions/windowActions';
 import { isMacintosh, isWeb } from 'vs/base/common/platform';
 import { Codicon } from 'vs/base/common/codicons';
 import { registerIcon } from 'vs/platform/theme/common/iconRegistry';
+import { isMouseEvent } from 'vs/base/browser/dom';
 
 const explorerViewIcon = registerIcon('explorer-view-icon', Codicon.files, localize('explorerViewIcon', 'View icon of the explorer view.'));
 const openEditorsViewIcon = registerIcon('open-editors-view-icon', Codicon.book, localize('openEditorsIcon', 'View icon of the open editors view.'));
@@ -196,7 +197,7 @@ export class ExplorerViewPaneContainer extends ViewPaneContainer {
 		if (viewDescriptor.id === VIEW_ID) {
 			return this.instantiationService.createInstance(ExplorerView, options, {
 				willOpenElement: e => {
-					if (!(e instanceof MouseEvent)) {
+					if (!(isMouseEvent(e))) {
 						return; // only delay when user clicks
 					}
 
@@ -219,7 +220,7 @@ export class ExplorerViewPaneContainer extends ViewPaneContainer {
 					}
 				},
 				didOpenElement: e => {
-					if (!(e instanceof MouseEvent)) {
+					if (!(isMouseEvent(e))) {
 						return; // only delay when user clicks
 					}
 

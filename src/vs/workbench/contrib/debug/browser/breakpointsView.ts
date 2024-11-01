@@ -168,7 +168,7 @@ export class BreakpointsView extends ViewPane {
 				return;
 			}
 
-			if (e.browserEvent instanceof MouseEvent && e.browserEvent.button === 1) { // middle click
+			if (dom.isMouseEvent(e.browserEvent) && e.browserEvent.button === 1) { // middle click
 				return;
 			}
 
@@ -178,9 +178,9 @@ export class BreakpointsView extends ViewPane {
 			if (e.element instanceof InstructionBreakpoint) {
 				const disassemblyView = await this.editorService.openEditor(DisassemblyViewInput.instance);
 				// Focus on double click
-				(disassemblyView as DisassemblyView).goToAddress(e.element.instructionReference, e.browserEvent instanceof MouseEvent && e.browserEvent.detail === 2);
+				(disassemblyView as DisassemblyView).goToAddress(e.element.instructionReference, dom.isMouseEvent(e.browserEvent) && e.browserEvent.detail === 2);
 			}
-			if (e.browserEvent instanceof MouseEvent && e.browserEvent.detail === 2 && e.element instanceof FunctionBreakpoint && e.element !== this.inputBoxData?.breakpoint) {
+			if (dom.isMouseEvent(e.browserEvent) && e.browserEvent.detail === 2 && e.element instanceof FunctionBreakpoint && e.element !== this.inputBoxData?.breakpoint) {
 				// double click
 				this.renderInputBox({ breakpoint: e.element, type: 'name' });
 			}

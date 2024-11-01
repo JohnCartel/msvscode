@@ -236,6 +236,8 @@ export interface IOverlayWebview extends IWebview {
 
 	options: WebviewOptions;
 
+	set window(win: Window);
+
 	/**
 	 * Take ownership of the webview.
 	 *

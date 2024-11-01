@@ -3,7 +3,7 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { $, addDisposableListener, append, scheduleAtNextAnimationFrame } from 'vs/base/browser/dom';
+import { $, addDisposableListener, append, getWindow, scheduleAtNextAnimationFrame } from 'vs/base/browser/dom';
 import { ISashEvent as IBaseSashEvent, Orientation, Sash, SashState } from 'vs/base/browser/ui/sash/sash';
 import { SmoothScrollableElement } from 'vs/base/browser/ui/scrollbar/scrollableElement';
 import { pushToEnd, pushToStart, range } from 'vs/base/common/arrays';
@@ -547,7 +547,7 @@ export class SplitView<TLayoutContext = undefined> extends Disposable {
 		this.scrollable = new Scrollable({
 			forceIntegerValues: true,
 			smoothScrollDuration: 125,
-			scheduleAtNextAnimationFrame
+			scheduleAtNextAnimationFrame: callback => scheduleAtNextAnimationFrame(getWindow(this.el), callback),
 		});
 		this.scrollableElement = this._register(new SmoothScrollableElement(this.viewContainer, {
 			vertical: this.orientation === Orientation.VERTICAL ? (options.scrollbarVisibility ?? ScrollbarVisibility.Auto) : ScrollbarVisibility.Hidden,

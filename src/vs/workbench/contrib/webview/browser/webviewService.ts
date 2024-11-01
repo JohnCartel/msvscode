@@ -44,6 +44,7 @@ export class WebviewService extends Disposable implements IWebviewService {
 	public readonly onDidChangeActiveWebview = this._onDidChangeActiveWebview.event;
 
 	createWebviewElement(initInfo: WebviewInitInfo): IWebviewElement {
+		// 创建WebviewElement
 		const webview = this._instantiationService.createInstance(WebviewElement, initInfo, this._webviewThemeDataProvider);
 		this.registerNewWebview(webview);
 		return webview;

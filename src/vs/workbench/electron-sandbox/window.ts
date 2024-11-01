@@ -7,7 +7,7 @@ import { localize } from 'vs/nls';
 import { URI } from 'vs/base/common/uri';
 import { onUnexpectedError } from 'vs/base/common/errors';
 import { equals } from 'vs/base/common/objects';
-import { EventType, EventHelper, addDisposableListener, scheduleAtNextAnimationFrame, ModifierKeyEmitter } from 'vs/base/browser/dom';
+import { EventType, EventHelper, addDisposableListener, scheduleAtNextAnimationFrame, ModifierKeyEmitter, getWindow } from 'vs/base/browser/dom';
 import { Separator, WorkbenchActionExecutedClassification, WorkbenchActionExecutedEvent } from 'vs/base/common/actions';
 import { IFileService } from 'vs/platform/files/common/files';
 import { EditorResourceAccessor, IUntitledTextResourceEditorInput, SideBySideEditor, pathsToEditors, IResourceDiffEditorInput, IUntypedEditorInput, IEditorPane, isResourceEditorInput, IResourceMergeEditorInput } from 'vs/workbench/common/editor';
@@ -126,16 +126,17 @@ export class NativeWindow extends Disposable {
 	private registerListeners(): void {
 
 		// Layout
-		this._register(addDisposableListener(window, EventType.RESIZE, e => this.onWindowResize(e, true)));
+		// this._register(addDisposableListener(window, EventType.RESIZE, e => this.onWindowResize(e, true)));
+		this._register(addDisposableListener(window, EventType.RESIZE, () => this.layoutService.layout()));
 
 		// React to editor input changes
 		this._register(this.editorService.onDidActiveEditorChange(() => this.updateTouchbarMenu()));
 
 		// prevent opening a real URL inside the window
 		for (const event of [EventType.DRAG_OVER, EventType.DROP]) {
-			window.document.body.addEventListener(event, (e: DragEvent) => {
+			this._register(addDisposableListener(window.document.body, event, (e: DragEvent) => {
 				EventHelper.stop(e);
-			});
+			}));
 		}
 
 		// Support runAction event
@@ -294,7 +295,7 @@ export class NativeWindow extends Disposable {
 
 		// Maximize/Restore on doubleclick (for macOS custom title)
 		if (isMacintosh && getTitleBarStyle(this.configurationService) === 'custom') {
-			const titlePart = assertIsDefined(this.layoutService.getContainer(Parts.TITLEBAR_PART));
+			const titlePart = assertIsDefined(this.layoutService.getContainer(window, Parts.TITLEBAR_PART));
 
 			this._register(addDisposableListener(titlePart, EventType.DBLCLICK, e => {
 				EventHelper.stop(e);
@@ -493,7 +494,7 @@ export class NativeWindow extends Disposable {
 				// call at the next animation frame once, in the hope that the dimensions are
 				// proper then.
 				if (retry) {
-					scheduleAtNextAnimationFrame(() => this.onWindowResize(e, false));
+					scheduleAtNextAnimationFrame(getWindow(e), () => this.onWindowResize(e, false));
 				}
 				return;
 			}
@@ -664,9 +665,9 @@ export class NativeWindow extends Disposable {
 	private setupOpenHandlers(): void {
 
 		// Block window.open() calls
-		window.open = function (): Window | null {
-			throw new Error('Prevented call to window.open(). Use IOpenerService instead!');
-		};
+		// window.open = function (): Window | null {
+		// 	throw new Error('Prevented call to window.open(). Use IOpenerService instead!');
+		// };
 
 		// Handle external open() calls
 		this.openerService.setDefaultExternalOpener({
