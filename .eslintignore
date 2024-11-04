@@ -30,5 +30,5 @@
 **/typings/**
 
 # src\vs\platform\layout\browser\layoutService.ts
-# src\vs\base\parts\contextmenu\electron-main\contextmenu.ts
+src\vs\base\parts\contextmenu\electron-main\contextmenu.ts
 # src\vs\workbench\browser\parts\titlebar\auxTitlebarPart.ts
