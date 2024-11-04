@@ -3,20 +3,16 @@
  *  Licensed under the MIT License. See License.txt in the project root for license information.
  *--------------------------------------------------------------------------------------------*/
 
-import { BrowserWindow, IpcMainEvent, Menu, MenuItem } from 'electron';
+import { IpcMainEvent, Menu, MenuItem } from 'electron';
 import { validatedIpcMain } from 'vs/base/parts/ipc/electron-main/ipcMain';
-import { withNullAsUndefined } from 'vs/base/common/types';
 import { CONTEXT_MENU_CHANNEL, CONTEXT_MENU_CLOSE_CHANNEL, IPopupOptions, ISerializableContextMenuItem } from 'vs/base/parts/contextmenu/common/contextmenu';
-import { getActiveBrowserWindow } from 'vs/platform/windows/electron-main/windows';
 
 
 export function registerContextMenuListener(): void {
 	validatedIpcMain.on(CONTEXT_MENU_CHANNEL, (event: IpcMainEvent, contextMenuId: number, items: ISerializableContextMenuItem[], onClickChannel: string, options?: IPopupOptions) => {
 		const menu = createMenu(event, onClickChannel, items);
 
-		const activeWindow = getActiveBrowserWindow() || BrowserWindow.fromWebContents(event.sender);
 		menu.popup({
-			window: withNullAsUndefined(activeWindow),
 			x: options ? options.x : undefined,
 			y: options ? options.y : undefined,
 			positioningItem: options ? options.positioningItem : undefined,
