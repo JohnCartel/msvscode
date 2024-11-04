@@ -24,7 +24,7 @@ import { CustomMenubarControl } from 'vs/workbench/browser/parts/titlebar/menuba
 import { IInstantiationService, ServicesAccessor } from 'vs/platform/instantiation/common/instantiation';
 import { Emitter, Event } from 'vs/base/common/event';
 import { IStorageService } from 'vs/platform/storage/common/storage';
-import { Parts, IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { createActionViewItem, createAndFillInContextMenuActions } from 'vs/platform/actions/browser/menuEntryActionViewItem';
 import { Action2, IMenuService, MenuId, registerAction2 } from 'vs/platform/actions/common/actions';
 import { ContextKeyExpr, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
@@ -37,6 +37,7 @@ import { CommandCenterControl } from 'vs/workbench/browser/parts/titlebar/comman
 import { IHoverDelegate } from 'vs/base/browser/ui/iconLabel/iconHoverDelegate';
 import { IHoverService } from 'vs/workbench/services/hover/browser/hover';
 import { CATEGORIES } from 'vs/workbench/common/actions';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class TitlebarPart extends Part implements ITitleService {
 

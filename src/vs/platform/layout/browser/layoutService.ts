@@ -6,7 +6,18 @@
 import { IDimension } from 'vs/base/browser/dom';
 import { Event } from 'vs/base/common/event';
 import { createDecorator } from 'vs/platform/instantiation/common/instantiation';
-import { Parts } from 'vs/workbench/services/layout/browser/layoutService';
+
+export const enum Parts {
+	TITLEBAR_PART = 'workbench.parts.titlebar',
+	BANNER_PART = 'workbench.parts.banner',
+	ACTIVITYBAR_PART = 'workbench.parts.activitybar',
+	SIDEBAR_PART = 'workbench.parts.sidebar',
+	PANEL_PART = 'workbench.parts.panel',
+	AUXILIARYBAR_PART = 'workbench.parts.auxiliarybar',
+	EDITOR_PART = 'workbench.parts.editor',
+	STATUSBAR_PART = 'workbench.parts.statusbar'
+}
+
 
 export const ILayoutService = createDecorator<ILayoutService>('layoutService');
 

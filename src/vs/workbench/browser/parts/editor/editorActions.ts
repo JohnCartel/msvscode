@@ -9,7 +9,7 @@ import { firstOrDefault } from 'vs/base/common/arrays';
 import { IEditorIdentifier, IEditorCommandsContext, CloseDirection, SaveReason, EditorsOrder, EditorInputCapabilities, DEFAULT_EDITOR_ASSOCIATION, GroupIdentifier, EditorResourceAccessor } from 'vs/workbench/common/editor';
 import { EditorInput } from 'vs/workbench/common/editor/editorInput';
 import { SideBySideEditorInput } from 'vs/workbench/common/editor/sideBySideEditorInput';
-import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { GoFilter, IHistoryService } from 'vs/workbench/services/history/common/history';
 import { IKeybindingService } from 'vs/platform/keybinding/common/keybinding';
 import { ICommandService } from 'vs/platform/commands/common/commands';
@@ -33,6 +33,7 @@ import { KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegis
 import { CATEGORIES } from 'vs/workbench/common/actions';
 import { ActiveEditorContext } from 'vs/workbench/common/contextkeys';
 import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class ExecuteCommandAction extends Action {
 

@@ -18,7 +18,7 @@ import { IConfigurationService } from 'vs/platform/configuration/common/configur
 import { OpenFolderAction, OpenFileFolderAction, OpenFileAction } from 'vs/workbench/browser/actions/workspaceActions';
 import { OpenRecentAction } from 'vs/workbench/browser/actions/windowActions';
 import { ShowAllCommandsAction } from 'vs/workbench/contrib/quickaccess/browser/commandsQuickAccess';
-import { Parts, IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { FindInFilesActionId } from 'vs/workbench/contrib/search/common/constants';
 import * as dom from 'vs/base/browser/dom';
 import { KeybindingLabel } from 'vs/base/browser/ui/keybindingLabel/keybindingLabel';
@@ -33,6 +33,7 @@ import { IThemeService } from 'vs/platform/theme/common/themeService';
 import { attachKeybindingLabelStyler } from 'vs/platform/theme/common/styler';
 import { ContextKeyExpression, IContextKeyService } from 'vs/platform/contextkey/common/contextkey';
 import { TerminalContextKeys } from 'vs/workbench/contrib/terminal/common/terminalContextKey';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 const $ = dom.$;
 

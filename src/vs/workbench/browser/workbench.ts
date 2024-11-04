@@ -15,7 +15,7 @@ import { isWindows, isLinux, isWeb, isNative, isMacintosh } from 'vs/base/common
 import { IWorkbenchContributionsRegistry, Extensions as WorkbenchExtensions } from 'vs/workbench/common/contributions';
 import { IEditorFactoryRegistry, EditorExtensions } from 'vs/workbench/common/editor';
 import { getSingletonServiceDescriptors } from 'vs/platform/instantiation/common/extensions';
-import { Position, Parts, IWorkbenchLayoutService, positionToString } from 'vs/workbench/services/layout/browser/layoutService';
+import { Position, IWorkbenchLayoutService, positionToString } from 'vs/workbench/services/layout/browser/layoutService';
 import { IStorageService, WillSaveStateReason, StorageScope, StorageTarget } from 'vs/platform/storage/common/storage';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
@@ -41,6 +41,7 @@ import { Layout } from 'vs/workbench/browser/layout';
 import { IHostService } from 'vs/workbench/services/host/browser/host';
 import { IDialogService } from 'vs/platform/dialogs/common/dialogs';
 import { addDisposableListener } from 'vs/base/browser/dom';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export interface IWorkbenchOptions {
 

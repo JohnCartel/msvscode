@@ -7,13 +7,14 @@ import { TERMINAL_VIEW_ID } from 'vs/workbench/contrib/terminal/common/terminal'
 import { Event, Emitter } from 'vs/base/common/event';
 import { IDisposable, Disposable, DisposableStore, dispose } from 'vs/base/common/lifecycle';
 import { SplitView, Orientation, IView, Sizing } from 'vs/base/browser/ui/splitview/splitview';
-import { IWorkbenchLayoutService, Parts, Position } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { ITerminalInstance, Direction, ITerminalGroup, ITerminalService, ITerminalInstanceService } from 'vs/workbench/contrib/terminal/browser/terminal';
 import { ViewContainerLocation, IViewDescriptorService } from 'vs/workbench/common/views';
 import { IShellLaunchConfig, ITerminalTabLayoutInfoById } from 'vs/platform/terminal/common/terminal';
 import { TerminalStatus } from 'vs/workbench/contrib/terminal/browser/terminalStatusList';
 import { getPartByLocation } from 'vs/workbench/browser/parts/views/viewsService';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 const enum Constants {
 	/**

@@ -15,7 +15,7 @@ import { EditorServiceImpl, IEditorGroupView, IEditorGroupTitleHeight, IEditorGr
 import { Event, Emitter } from 'vs/base/common/event';
 import { IResolvedWorkingCopyBackup, IWorkingCopyBackupService } from 'vs/workbench/services/workingCopy/common/workingCopyBackup';
 import { IConfigurationService, ConfigurationTarget } from 'vs/platform/configuration/common/configuration';
-import { IWorkbenchLayoutService, PanelAlignment, Parts, Position as PartPosition } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, PanelAlignment, Position as PartPosition } from 'vs/workbench/services/layout/browser/layoutService';
 import { TextModelResolverService } from 'vs/workbench/services/textmodelResolver/common/textModelResolverService';
 import { ITextModelService } from 'vs/editor/common/services/resolverService';
 import { IEditorOptions, IResourceEditorInput, IEditorModel, IResourceEditorInputIdentifier, ITextResourceEditorInput, ITextEditorOptions } from 'vs/platform/editor/common/editor';
@@ -159,7 +159,7 @@ import { IDiagnosticInfoOptions, IDiagnosticInfo } from 'vs/platform/diagnostics
 import { ExtensionIdentifier, ExtensionType, IExtension, IExtensionDescription, IRelaxedExtensionManifest, TargetPlatform } from 'vs/platform/extensions/common/extensions';
 import { ISocketFactory } from 'vs/platform/remote/common/remoteAgentConnection';
 import { IRemoteAgentEnvironment } from 'vs/platform/remote/common/remoteAgentEnvironment';
-import { ILayoutOffsetInfo } from 'vs/platform/layout/browser/layoutService';
+import { ILayoutOffsetInfo, Parts } from 'vs/platform/layout/browser/layoutService';
 import { IUserDataProfilesService, toUserDataProfile, UserDataProfilesService } from 'vs/platform/userDataProfile/common/userDataProfile';
 import { UserDataProfileService } from 'vs/workbench/services/userDataProfile/common/userDataProfileService';
 import { IUserDataProfileService } from 'vs/workbench/services/userDataProfile/common/userDataProfile';

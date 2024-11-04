@@ -11,7 +11,7 @@ import { isAncestor, addDisposableListener, EventType, Dimension, scheduleAtNext
 import { IInstantiationService } from 'vs/platform/instantiation/common/instantiation';
 import { NotificationsList } from 'vs/workbench/browser/parts/notifications/notificationsList';
 import { Event, Emitter } from 'vs/base/common/event';
-import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { NOTIFICATIONS_TOAST_BORDER, NOTIFICATIONS_BACKGROUND } from 'vs/workbench/common/theme';
 import { IThemeService, Themable } from 'vs/platform/theme/common/themeService';
 import { widgetShadow } from 'vs/platform/theme/common/colorRegistry';
@@ -25,6 +25,7 @@ import { IHostService } from 'vs/workbench/services/host/browser/host';
 import { IntervalCounter } from 'vs/base/common/async';
 import { assertIsDefined } from 'vs/base/common/types';
 import { NotificationsToastsVisibleContext } from 'vs/workbench/common/contextkeys';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 interface INotificationToast {
 	item: INotificationViewItem;

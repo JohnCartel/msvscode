@@ -8,7 +8,7 @@ import 'vs/workbench/browser/parts/sidebar/sidebarActions';
 import { Registry } from 'vs/platform/registry/common/platform';
 import { CompositePart } from 'vs/workbench/browser/parts/compositePart';
 import { PaneCompositeRegistry, Extensions as ViewletExtensions, PaneCompositeDescriptor, PaneComposite } from 'vs/workbench/browser/panecomposite';
-import { IWorkbenchLayoutService, Parts, Position as SideBarPosition } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, Position as SideBarPosition } from 'vs/workbench/services/layout/browser/layoutService';
 import { SidebarFocusContext, ActiveViewletContext } from 'vs/workbench/common/contextkeys';
 import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IContextMenuService } from 'vs/platform/contextview/browser/contextView';
@@ -32,6 +32,7 @@ import { IViewDescriptorService, ViewContainerLocation } from 'vs/workbench/comm
 import { Gesture, EventType as GestureEventType } from 'vs/base/browser/touch';
 import { IPaneComposite } from 'vs/workbench/common/panecomposite';
 import { IPaneCompositePart } from 'vs/workbench/browser/parts/paneCompositePart';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class SidebarPart extends CompositePart<PaneComposite> implements IPaneCompositePart {
 

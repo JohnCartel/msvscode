@@ -5,23 +5,12 @@
 
 import { refineServiceDecorator } from 'vs/platform/instantiation/common/instantiation';
 import { Event } from 'vs/base/common/event';
-import { ILayoutService } from 'vs/platform/layout/browser/layoutService';
+import { ILayoutService, Parts } from 'vs/platform/layout/browser/layoutService';
 import { Part } from 'vs/workbench/browser/part';
 import { Dimension } from 'vs/base/browser/dom';
 import { Direction } from 'vs/base/browser/ui/grid/grid';
 
 export const IWorkbenchLayoutService = refineServiceDecorator<ILayoutService, IWorkbenchLayoutService>(ILayoutService);
-
-export const enum Parts {
-	TITLEBAR_PART = 'workbench.parts.titlebar',
-	BANNER_PART = 'workbench.parts.banner',
-	ACTIVITYBAR_PART = 'workbench.parts.activitybar',
-	SIDEBAR_PART = 'workbench.parts.sidebar',
-	PANEL_PART = 'workbench.parts.panel',
-	AUXILIARYBAR_PART = 'workbench.parts.auxiliarybar',
-	EDITOR_PART = 'workbench.parts.editor',
-	STATUSBAR_PART = 'workbench.parts.statusbar'
-}
 
 export const enum Position {
 	LEFT,

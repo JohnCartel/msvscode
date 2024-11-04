@@ -9,6 +9,7 @@ import { withNullAsUndefined } from 'vs/base/common/types';
 import { CONTEXT_MENU_CHANNEL, CONTEXT_MENU_CLOSE_CHANNEL, IPopupOptions, ISerializableContextMenuItem } from 'vs/base/parts/contextmenu/common/contextmenu';
 import { getActiveBrowserWindow } from 'vs/platform/windows/electron-main/windows';
 
+
 export function registerContextMenuListener(): void {
 	validatedIpcMain.on(CONTEXT_MENU_CHANNEL, (event: IpcMainEvent, contextMenuId: number, items: ISerializableContextMenuItem[], onClickChannel: string, options?: IPopupOptions) => {
 		const menu = createMenu(event, onClickChannel, items);

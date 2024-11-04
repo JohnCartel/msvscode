@@ -31,7 +31,8 @@ import { INotificationService } from 'vs/platform/notification/common/notificati
 import { openContextMenu } from 'vs/workbench/contrib/terminal/browser/terminalContextMenu';
 import { ICommandService } from 'vs/platform/commands/common/commands';
 import { ACTIVE_GROUP } from 'vs/workbench/services/editor/common/editorService';
-import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 const findWidgetSelector = '.simple-find-part-wrapper';
 

@@ -13,7 +13,7 @@ import { editorBackground, foreground } from 'vs/platform/theme/common/colorRegi
 import { getThemeTypeSelector, IThemeService } from 'vs/platform/theme/common/themeService';
 import { DEFAULT_EDITOR_MIN_DIMENSIONS } from 'vs/workbench/browser/parts/editor/editor';
 import * as themes from 'vs/workbench/common/theme';
-import { IWorkbenchLayoutService, Parts, Position } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
 import { IWorkbenchEnvironmentService } from 'vs/workbench/services/environment/common/environmentService';
 import { IEditorGroupsService } from 'vs/workbench/services/editor/common/editorGroupsService';
 import { IConfigurationService } from 'vs/platform/configuration/common/configuration';
@@ -21,6 +21,7 @@ import * as perf from 'vs/base/common/performance';
 import { assertIsDefined } from 'vs/base/common/types';
 import { RunOnceScheduler } from 'vs/base/common/async';
 import { ISplashStorageService } from 'vs/workbench/contrib/splash/browser/splash';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class PartsSplash {
 

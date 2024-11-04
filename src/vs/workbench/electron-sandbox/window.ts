@@ -46,7 +46,7 @@ import { Schemas } from 'vs/base/common/network';
 import { INativeHostService } from 'vs/platform/native/electron-sandbox/native';
 import { posix } from 'vs/base/common/path';
 import { ITunnelService, extractLocalHostUriMetaDataForPortMapping } from 'vs/platform/tunnel/common/tunnel';
-import { IWorkbenchLayoutService, Parts, positionFromString, Position } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, positionFromString, Position } from 'vs/workbench/services/layout/browser/layoutService';
 import { IWorkingCopyService } from 'vs/workbench/services/workingCopy/common/workingCopyService';
 import { WorkingCopyCapabilities } from 'vs/workbench/services/workingCopy/common/workingCopy';
 import { AutoSaveMode, IFilesConfigurationService } from 'vs/workbench/services/filesConfiguration/common/filesConfigurationService';
@@ -65,6 +65,7 @@ import { toErrorMessage } from 'vs/base/common/errorMessage';
 import { registerWindowDriver } from 'vs/platform/driver/electron-sandbox/driver';
 import { ILabelService } from 'vs/platform/label/common/label';
 import { dirname } from 'vs/base/common/resources';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class NativeWindow extends Disposable {
 

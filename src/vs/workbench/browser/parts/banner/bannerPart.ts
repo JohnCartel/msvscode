@@ -15,7 +15,7 @@ import { IStorageService } from 'vs/platform/storage/common/storage';
 import { IThemeService, registerThemingParticipant, ThemeIcon } from 'vs/platform/theme/common/themeService';
 import { TITLE_BAR_BORDER } from 'vs/workbench/common/theme';
 import { Part } from 'vs/workbench/browser/part';
-import { IWorkbenchLayoutService, Parts } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { Action, IAction, Separator } from 'vs/base/common/actions';
 import { Link } from 'vs/platform/opener/browser/link';
 import { MarkdownString } from 'vs/base/common/htmlContent';
@@ -40,6 +40,7 @@ import { createAndFillInActionBarActions } from 'vs/platform/actions/browser/men
 import { StandardKeyboardEvent } from 'vs/base/browser/keyboardEvent';
 import { mnemonicMenuLabel } from 'vs/base/common/labels';
 import product from 'vs/platform/product/common/product';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 MenuRegistry.appendMenuItem(MenuId.GlobalActivity, { command: { id: 'undo', title: 'Test ABCD' }, when: undefined, group: 'navigation' });
 

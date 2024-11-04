@@ -24,7 +24,7 @@ import { EditorDropTarget } from 'vs/workbench/browser/parts/editor/editorDropTa
 import { Color } from 'vs/base/common/color';
 import { CenteredViewLayout } from 'vs/base/browser/ui/centered/centeredViewLayout';
 import { onUnexpectedError } from 'vs/base/common/errors';
-import { Parts, IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
 import { assertIsDefined, assertType } from 'vs/base/common/types';
 import { IBoundarySashes, ISerializedNode } from 'vs/base/browser/ui/grid/gridview';
 import { CompositeDragAndDropObserver } from 'vs/workbench/browser/dnd';
@@ -32,6 +32,7 @@ import { DeferredPromise, Promises } from 'vs/base/common/async';
 import { findGroup } from 'vs/workbench/services/editor/common/editorGroupFinder';
 import { SIDE_GROUP } from 'vs/workbench/services/editor/common/editorService';
 import { localize } from 'vs/nls';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 interface IEditorPartUIState {
 	readonly serializedGrid: ISerializedGrid;

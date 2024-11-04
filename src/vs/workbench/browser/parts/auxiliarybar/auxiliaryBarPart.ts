@@ -20,7 +20,7 @@ import { ActiveAuxiliaryContext, AuxiliaryBarFocusContext } from 'vs/workbench/c
 import { SIDE_BAR_BACKGROUND, SIDE_BAR_BORDER, SIDE_BAR_TITLE_FOREGROUND } from 'vs/workbench/common/theme';
 import { IViewDescriptorService, ViewContainerLocation } from 'vs/workbench/common/views';
 import { IExtensionService } from 'vs/workbench/services/extensions/common/extensions';
-import { IWorkbenchLayoutService, Parts, Position } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService, Position } from 'vs/workbench/services/layout/browser/layoutService';
 import { IActivityHoverOptions } from 'vs/workbench/browser/parts/compositeBarActions';
 import { HoverPosition } from 'vs/base/browser/ui/hover/hoverWidget';
 import { IAction, Separator, toAction } from 'vs/base/common/actions';
@@ -29,6 +29,7 @@ import { assertIsDefined } from 'vs/base/common/types';
 import { LayoutPriority } from 'vs/base/browser/ui/splitview/splitview';
 import { ToggleSidebarPositionAction } from 'vs/workbench/browser/actions/layoutActions';
 import { ICommandService } from 'vs/platform/commands/common/commands';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class AuxiliaryBarPart extends BasePanelPart {
 	static readonly activePanelSettingsKey = 'workbench.auxiliarybar.activepanelid';

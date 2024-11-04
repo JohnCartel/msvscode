@@ -6,7 +6,7 @@
 import { localize } from 'vs/nls';
 import { IStatusbarService } from 'vs/workbench/services/statusbar/browser/statusbar';
 import { Action } from 'vs/base/common/actions';
-import { Parts, IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
+import { IWorkbenchLayoutService } from 'vs/workbench/services/layout/browser/layoutService';
 import { KeyCode } from 'vs/base/common/keyCodes';
 import { KeybindingsRegistry, KeybindingWeight } from 'vs/platform/keybinding/common/keybindingsRegistry';
 import { ServicesAccessor } from 'vs/editor/browser/editorExtensions';
@@ -15,6 +15,7 @@ import { CATEGORIES } from 'vs/workbench/common/actions';
 import { IEditorService } from 'vs/workbench/services/editor/common/editorService';
 import { StatusbarViewModel } from 'vs/workbench/browser/parts/statusbar/statusbarModel';
 import { StatusBarFocused } from 'vs/workbench/common/contextkeys';
+import { Parts } from 'vs/platform/layout/browser/layoutService';
 
 export class ToggleStatusbarEntryVisibilityAction extends Action {
 
