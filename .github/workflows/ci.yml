@@ -76,10 +76,13 @@ jobs:
           mkdir -Force .build/node_modules_cache
           7z.exe a .build/node_modules_cache/cache.7z -mx3 `@.build/node_modules_list.txt
 
-      - name: Compile and Download
+      - name: Compile
         # run: yarn npm-run-all --max_old_space_size=4095 -lp compile "electron x64" playwright-install download-builtin-extensions
         run: |
-          yarn gulp vscode-win32-x640-min
+          yarn gulp vscode-win32-x64-min
+
+      - name: Zip artifact
+        run: |
           7z.exe a .build/vscode-win32-x64.zip ../VSCode-win32-x64 -mx9
 
       - name: Upload artifact
