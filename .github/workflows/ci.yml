@@ -83,7 +83,7 @@ jobs:
           7z.exe a .build/vscode-win32-x64.zip ../VSCode-win32-x64 -mx9
 
       - name: Upload artifact
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v4
         with:
           name: vscode-win32-x64
           path: .build/vscode-win32-x64.zip
