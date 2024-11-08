@@ -27,9 +27,17 @@ jobs:
         with:
           node-version: 16
 
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "2.7"
+      # - uses: actions/setup-python@v5
+      #   with:
+      #     python-version: "2.7"
+
+      - name: Install Python 2.7
+        run: |
+            curl -o python-2.7.18.amd64.msi https://www.python.org/ftp/python/2.7.18/python-2.7.18.amd64.msi
+            msiexec /i python-2.7.18.amd64.msi /quiet /qn /norestart
+            echo "C:\Python27" >> $GITHUB_PATH
+            echo "C:\Python27\Scripts" >> $GITHUB_PATH
+
 
       - name: Compute node modules cache key
         id: nodeModulesCacheKey
