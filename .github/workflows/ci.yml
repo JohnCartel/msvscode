@@ -20,6 +20,16 @@ jobs:
     steps:
       - uses: actions/checkout@v3
 
+      - name: Set artifact name
+        id: set-artifact-name
+        run: |
+          if ($env:TAG_NAME -like 'refs/tags/release/*') {
+            $TAG_SUFFIX = $env:TAG_NAME -replace 'refs/tags/release/', ''
+            echo "ARTIFACT_NAME=vscode-win32-x64(${TAG_SUFFIX})" >> $GITHUB_ENV
+          } else {
+            echo "ARTIFACT_NAME=vscode-win32-x64" >> $GITHUB_ENV
+          }
+
       - uses: actions/setup-node@v3
         with:
           node-version: 16
@@ -94,15 +104,6 @@ jobs:
         run: |
             7z.exe a .build/vscode-win32-x64.zip ../VSCode-win32-x64 -mx9
 
-      - name: Set artifact name
-        id: set-artifact-name
-        run: |
-          if [[ "${{ env.TAG_NAME }}" == refs/tags/release/* ]]; then
-            $TAG_SUFFIX = $env:TAG_NAME -replace 'refs/tags/release/', ''
-            echo "ARTIFACT_NAME=vscode-win32-x64(${TAG_SUFFIX})" >> $GITHUB_ENV
-          else
-            echo "ARTIFACT_NAME=vscode-win32-x64" >> $GITHUB_ENV
-          fi
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
